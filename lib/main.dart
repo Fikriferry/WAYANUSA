@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'pages/login_page.dart';
 import 'pages/register_page.dart';
-import 'pages/homepage.dart';       
-import 'pages/chatbotpage.dart';    
+import 'pages/homepage.dart';
+import 'pages/chatbotpage.dart';
 import 'pages/videopage.dart';
 import 'pages/quiz_page.dart';
 import 'pages/cari_dalang_page.dart';
+import 'pages/edit_profile_page.dart';
 
 void main() {
   runApp(const WayanusaApp());
@@ -45,7 +46,9 @@ class WayanusaApp extends StatelessWidget {
         // route halaman quiz
         '/quiz': (context) => const QuizPage(),
 
-        '/cari_dalang': (context) => const CariDalangPage(), // placeholder
+        '/cari_dalang': (context) => const CariDalangPage(),
+
+        '/edit_profile': (context) => const EditProfilePage(),
       },
     );
   }
