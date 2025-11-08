@@ -8,6 +8,9 @@ import 'pages/quiz_page.dart';
 import 'pages/cari_dalang_page.dart';
 import 'pages/edit_profile_page.dart';
 import 'pages/profile_page.dart';
+import 'pages/citra_wayang.dart';
+import 'pages/sejarah_wayang_page.dart';
+import 'pages/sejarah_detail_page.dart';
 
 void main() {
   runApp(const WayanusaApp());
@@ -52,6 +55,12 @@ class WayanusaApp extends StatelessWidget {
         '/edit_profile': (context) => const EditProfilePage(),
 
         '/profile': (context) => const ProfilePage(),
+
+        '/pengenalan_wayang': (context) => const PengenalanPage(),
+
+        '/sejarah_wayang': (context) => const SejarahWayangPage(),
+
+        '/sejarah_detail': (context) => const ArtikelDetailPage(),
       },
     );
   }

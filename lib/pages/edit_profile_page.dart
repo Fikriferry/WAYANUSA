@@ -27,7 +27,7 @@ class EditProfilePage extends StatelessWidget {
               backgroundColor: const Color(0xFFFFC107),
               child: ClipOval(
                 child: Image.asset(
-                  'assets/avatar.png', // Ganti sesuai aset kamu
+                  'assets/profil.png', // Ganti sesuai aset kamu
                   fit: BoxFit.cover,
                 ),
               ),

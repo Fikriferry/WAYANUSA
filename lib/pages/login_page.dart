@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'register_page.dart';
+import 'homepage.dart'; // tambahkan halaman tujuan login
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -24,7 +25,7 @@ class _LoginPageState extends State<LoginPage> {
             children: [
               Center(
                 child: Image.asset(
-                  'assets/logo.png', // ganti sesuai nama file logo kamu
+                  'assets/logo.png',
                   width: 150,
                 ),
               ),
@@ -68,9 +69,17 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 10),
               Center(
                 child: ElevatedButton(
-                  onPressed: () {},
+                  // 🔹 Langsung masuk tanpa inputan
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HomeWayangPage(),
+                      ),
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFB6783D), // warna coklat
+                    backgroundColor: const Color(0xFFB6783D),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
