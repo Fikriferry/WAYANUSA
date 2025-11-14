@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-// HAPUS SEMUA IMPORT KE HALAMAN LAIN
-// (Sudah dihapus sesuai permintaan Anda)
 
 class HomeWayangPage extends StatelessWidget {
   const HomeWayangPage({super.key});
@@ -26,7 +24,6 @@ class HomeWayangPage extends StatelessWidget {
                       child: Image.asset(
                         "assets/logo.png",
                         height: 31,
-                        // Fallback jika gambar tidak ada
                         errorBuilder: (context, error, stackTrace) =>
                             const Icon(Icons.image_not_supported, size: 31),
                       ),
@@ -40,17 +37,13 @@ class HomeWayangPage extends StatelessWidget {
                         child: const CircleAvatar(
                           radius: 22,
                           backgroundImage: AssetImage("assets/profil.png"),
-                          // Fallback jika gambar tidak ada
-                          // onBackgroundImageError: (exception, stackTrace) {
-                          //   // Kosongkan untuk menghindari error,
-                          //   // CircleAvatar akan tampilkan background default
-                          // },
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
+
               // ===== WELCOME TEXT =====
               const Center(
                 child: Text(
@@ -70,10 +63,9 @@ class HomeWayangPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(18),
                 child: Image.asset(
                   "assets/banner.jpg",
-                  height: 160,
+                  height: 230,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  // Fallback jika gambar tidak ada
                   errorBuilder: (context, error, stackTrace) => Container(
                     height: 160,
                     decoration: BoxDecoration(
@@ -92,7 +84,7 @@ class HomeWayangPage extends StatelessWidget {
 
               const SizedBox(height: 30),
 
-              // ===== 4 MENU ICON =====
+              // ===== 5 MENU ICON =====
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
@@ -112,15 +104,20 @@ class HomeWayangPage extends StatelessWidget {
                     "assets/icon_video.png",
                     "Pertunjukan\nWayang",
                   ),
+                  // 🟡 Tambahan: Menu Simulasi Dalang
+                  _menuItem(
+                    context,
+                    "assets/icon_play.png",
+                    "Menjadi\nDalang",
+                  ),
                 ],
               ),
 
               const SizedBox(height: 35),
 
-              // ===== Sejarah WAYANG SECTION (MODIFIKASI) =====
+              // ===== SEJARAH WAYANG SECTION =====
               GestureDetector(
                 onTap: () {
-                  // Arahkan ke halaman daftar sejarah (sudah benar)
                   Navigator.pushNamed(context, '/sejarah_wayang');
                 },
                 child: Column(
@@ -142,39 +139,34 @@ class HomeWayangPage extends StatelessWidget {
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 14),
 
-                    // --- PERUBAHAN UTAMA: DARI CONTAINER MENJADI SCROLL HORIZONTAL ---
                     SizedBox(
-                      height: 180, // Tentukan tinggi area scroll
+                      height: 180,
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         physics: const BouncingScrollPhysics(),
                         child: Row(
                           children: [
-                            // Panggil card baru
                             _buildSejarahCard(
                               context,
-                              'assets/mahabarata_banner.jpeg', // Gambar dari request
+                              'assets/mahabarata_banner.jpeg',
                               'Kisah Mahabharata',
                             ),
-                            // Kartu-kartu dummy agar bisa di-scroll
                             _buildSejarahCard(
                               context,
-                              'assets/mahabarata_banner.jpeg', // Ganti dengan aset Anda
+                              'assets/mahabarata_banner.jpeg',
                               'Kisah Ramayana',
                             ),
                             _buildSejarahCard(
                               context,
-                              'assets/mahabarata_banner.jpeg', // Ganti dengan aset Anda
+                              'assets/mahabarata_banner.jpeg',
                               'Cerita Punakawan',
                             ),
                           ],
                         ),
                       ),
                     ),
-                    // --- AKHIR PERUBAHAN ---
                   ],
                 ),
               ),
@@ -189,7 +181,6 @@ class HomeWayangPage extends StatelessWidget {
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xffE8D4BE),
         onPressed: () {
-          // Menggunakan pushNamed ke route '/chatbot'
           Navigator.pushNamed(context, '/chatbot');
         },
         child: Image.asset(
@@ -206,21 +197,18 @@ class HomeWayangPage extends StatelessWidget {
   Widget _menuItem(BuildContext context, String icon, String label) {
     return GestureDetector(
       onTap: () {
-        // --- SEMUA LOGIKA NAVIGASI DIPERBARUI DI SINI ---
-
+        // === NAVIGASI UNTUK SETIAP MENU ===
         if (label == "Pengenalan\nWayang") {
-          // Menggunakan pushNamed
-          // PASTIKAN Anda sudah menambahkan route '/pengenalan' di main.dart
           Navigator.pushNamed(context, '/pengenalan_wayang');
         } else if (label == "Quiz") {
-          // Menggunakan pushNamed
           Navigator.pushNamed(context, '/quiz');
         } else if (label == "Mencari\nDalang") {
-          // Menggunakan pushNamed
           Navigator.pushNamed(context, '/cari_dalang');
         } else if (label == "Pertunjukan\nWayang") {
-          // Menggunakan pushNamed
           Navigator.pushNamed(context, '/video');
+        } else if (label == "Menjadi\nDalang") {
+          // 🟡 Navigasi ke halaman simulasi dalang
+          Navigator.pushNamed(context, '/simulasi_dalang');
         }
       },
       child: Column(
@@ -257,17 +245,17 @@ class HomeWayangPage extends StatelessWidget {
     );
   }
 
-  // --- WIDGET BARU UNTUK KARTU SEJARAH ---
+  // --- KARTU SEJARAH ---
   Widget _buildSejarahCard(
     BuildContext context,
     String imagePath,
     String title,
   ) {
     return Container(
-      width: 250, // Lebar setiap kartu
-      margin: const EdgeInsets.only(right: 16), // Jarak antar kartu
+      width: 250,
+      margin: const EdgeInsets.only(right: 16),
       decoration: BoxDecoration(
-        color: const Color(0xffF3E7D3), // Warna background kartu
+        color: const Color(0xffF3E7D3),
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
@@ -280,7 +268,6 @@ class HomeWayangPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Gambar
           ClipRRect(
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(14),
@@ -288,10 +275,9 @@ class HomeWayangPage extends StatelessWidget {
             ),
             child: Image.asset(
               imagePath,
-              height: 120, // Tinggi gambar
+              height: 120,
               width: double.infinity,
               fit: BoxFit.cover,
-              // Fallback jika gambar artikel tidak ada
               errorBuilder: (context, error, stackTrace) => Container(
                 height: 120,
                 width: double.infinity,
@@ -302,7 +288,6 @@ class HomeWayangPage extends StatelessWidget {
               ),
             ),
           ),
-          // Judul
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: Text(

@@ -13,6 +13,51 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
+  // 🔹 Fungsi Login (supaya bisa dipanggil dari Enter dan tombol)
+  void _login() {
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Email dan Password tidak boleh kosong!"),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    // Contoh login dummy
+    if (email == "admin" && password == "123") {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Login berhasil!"),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      Future.delayed(const Duration(seconds: 1), () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const HomeWayangPage(),
+          ),
+        );
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Email atau password salah."),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -39,7 +84,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 20),
 
-              // Email Field
+              // 🔹 Email Field
               TextField(
                 controller: emailController,
                 decoration: InputDecoration(
@@ -51,7 +96,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 15),
 
-              // Password Field
+              // 🔹 Password Field (Enter untuk login)
               TextField(
                 controller: passwordController,
                 obscureText: true,
@@ -61,6 +106,7 @@ class _LoginPageState extends State<LoginPage> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
+                onSubmitted: (_) => _login(), // ✔ tekan Enter langsung login
               ),
               const SizedBox(height: 10),
 
@@ -73,54 +119,10 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 10),
 
-              // 🔹 Tombol Masuk dengan SnackBar
+              // 🔹 Tombol Masuk
               Center(
                 child: ElevatedButton(
-                  onPressed: () {
-                    final email = emailController.text.trim();
-                    final password = passwordController.text.trim();
-
-                    if (email.isEmpty || password.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content:
-                              Text("Email dan Password tidak boleh kosong!"),
-                          backgroundColor: Colors.red,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                      return;
-                    }
-
-                    // Contoh login dummy
-                    if (email == "admin@gmail.com" && password == "12345") {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Login berhasil!"),
-                          backgroundColor: Colors.green,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-
-                      // Tunggu sedikit biar snackbar sempat tampil
-                      Future.delayed(const Duration(seconds: 1), () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const HomeWayangPage(),
-                          ),
-                        );
-                      });
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Email atau password salah."),
-                          backgroundColor: Colors.red,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    }
-                  },
+                  onPressed: _login, // ✔ tombol login
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFB6783D),
                     shape: RoundedRectangleBorder(
@@ -140,7 +142,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 15),
 
-              // Daftar link
+              // 🔹 Daftar link
               Center(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -167,12 +169,13 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               const SizedBox(height: 20),
+
               const Divider(thickness: 1),
               const SizedBox(height: 10),
               const Center(child: Text('Login Menggunakan')),
               const SizedBox(height: 15),
 
-              // Social login
+              // 🔹 Social login
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

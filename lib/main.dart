@@ -11,6 +11,7 @@ import 'pages/profile_page.dart';
 import 'pages/citra_wayang.dart';
 import 'pages/sejarah_wayang_page.dart';
 import 'pages/sejarah_detail_page.dart';
+import 'pages/simulasi_dalang_page.dart';
 
 void main() {
   runApp(const WayanusaApp());
@@ -61,6 +62,8 @@ class WayanusaApp extends StatelessWidget {
         '/sejarah_wayang': (context) => const SejarahWayangPage(),
 
         '/sejarah_detail': (context) => const ArtikelDetailPage(),
+
+        '/simulasi_dalang': (context) => const SimulasiDalangPage(),
       },
     );
   }
