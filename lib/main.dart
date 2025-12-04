@@ -32,7 +32,7 @@ class WayanusaApp extends StatelessWidget {
       ),
 
       //  halaman pertama tetap login
-      initialRoute: '/loginnnnnn',
+      initialRoute: '/login',
 
       //  semua route
       routes: {
@@ -49,7 +49,7 @@ class WayanusaApp extends StatelessWidget {
         '/video': (context) => const VideoPage(),
 
         // route halaman quiz
-        '/quiz': (context) => const QuizPage(),
+        '/tes_singkat': (context) => const QuizPage(),
 
         '/cari_dalang': (context) => const CariDalangPage(),
 

@@ -93,7 +93,10 @@ class HomeWayangPage extends StatelessWidget {
                     "assets/icon_scan.png",
                     "Pengenalan\nWayang",
                   ),
-                  _menuItem(context, "assets/icon_quiz.png", "Quiz"),
+                  _menuItem(
+                    context, 
+                    "assets/icon_quiz.png", 
+                    "Tes\nSingkat"),
                   _menuItem(
                     context,
                     "assets/icon_dalang.png",
@@ -200,8 +203,8 @@ class HomeWayangPage extends StatelessWidget {
         // === NAVIGASI UNTUK SETIAP MENU ===
         if (label == "Pengenalan\nWayang") {
           Navigator.pushNamed(context, '/pengenalan_wayang');
-        } else if (label == "Quiz") {
-          Navigator.pushNamed(context, '/quiz');
+        } else if (label == "Tes\nSingkat") {
+          Navigator.pushNamed(context, '/tes_singkat');
         } else if (label == "Mencari\nDalang") {
           Navigator.pushNamed(context, '/cari_dalang');
         } else if (label == "Pertunjukan\nWayang") {
