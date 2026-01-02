@@ -1,4 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PengenalanPage extends StatefulWidget {
   const PengenalanPage({super.key});
@@ -7,300 +13,257 @@ class PengenalanPage extends StatefulWidget {
   State<PengenalanPage> createState() => _PengenalanPageState();
 }
 
-class _PengenalanPageState extends State<PengenalanPage> {
-  // 0 = Ambil Gambar, 1 = Upload Foto
-  int _currentTab = 0;
+class _PengenalanPageState extends State<PengenalanPage>
+    with SingleTickerProviderStateMixin {
+  final ImagePicker _picker = ImagePicker();
 
-  // Variabel state untuk menyimpan hasil identifikasi
-  // Awalnya null (belum ada hasil)
-  Map<String, String>? _wayangData;
-  String? _imagePath;
+  File? _image;
+  bool isLoading = false;
 
-  // --- FUNGSI SIMULASI ---
-  // Ini adalah fungsi dummy yang akan kita panggil
-  // untuk berpura-pura berhasil mengidentifikasi wayang.
-  void _startIdentificationSimulation() {
-    // Tampilkan loading (opsional)
-    // ...
+  Map<String, dynamic>? result;
 
-    // Set state dengan data dummy (pura-pura)
-    setState(() {
-      // Ganti path ini dengan path gambar wayang di assets Anda
-      _imagePath =
-          'assets/arjuna.png'; // <-- PENTING: Tambahkan gambar ini ke assets
-      _wayangData = {
-        'nama': 'Arjuna',
-        'asal': 'Kisah Mahabharata',
-        'sejarah':
-            'Salah satu anggota Pandawa Lima, putra Pandu dan Kunti.\n\n'
-            'Arjuna merupakan tokoh wayang yang memiliki watak cerdik, sopan, pandai, teliti, pendiam, bijaksana, dan melindungi yang lemah.\n\n'
-            'Arjuna memiliki sejumlah nama dan julukan, seperti Permadi, Janaka, Parta, Dananjaya, dan KumbaLali.',
-      };
-    });
-  }
+  late AnimationController _animController;
+  late Animation<double> _fadeAnim;
 
-  // Fungsi untuk mereset state ke awal
-  void _resetState() {
-    setState(() {
-      _wayangData = null;
-      _imagePath = null;
-    });
+  final String baseUrl = "http://10.0.2.2:8000/api/predict-wayang";
+
+  @override
+  void initState() {
+    super.initState();
+    _animController =
+        AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _fadeAnim = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeIn,
+    );
   }
 
   @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  // ================= IMAGE PICK =================
+  Future<void> pickImage(ImageSource source) async {
+    final picked = await _picker.pickImage(source: source, imageQuality: 85);
+    if (picked != null) {
+      setState(() {
+        _image = File(picked.path);
+        result = null;
+      });
+      predictWayang();
+    }
+  }
+
+  // ================= API CALL =================
+  Future<void> predictWayang() async {
+    if (_image == null) return;
+
+    setState(() => isLoading = true);
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    final request = http.MultipartRequest("POST", Uri.parse(baseUrl));
+    request.files.add(await http.MultipartFile.fromPath("image", _image!.path));
+
+    if (token != null) {
+      request.headers["Authorization"] = "Bearer $token";
+    }
+
+    final response = await request.send();
+    final respStr = await response.stream.bytesToString();
+
+    if (response.statusCode == 200) {
+      setState(() {
+        result = jsonDecode(respStr);
+        isLoading = false;
+      });
+      _animController.forward(from: 0);
+    } else {
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Gagal memprediksi wayang")),
+      );
+    }
+  }
+
+  // ================= UI =================
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F6FA),
       appBar: AppBar(
-        title: const Text('Pengenalan Wayang'),
+        title: const Text("Pengenalan Wayang AI"),
+        centerTitle: true,
         backgroundColor: Colors.white,
-        elevation: 1,
-        shadowColor: Colors.black.withOpacity(0.1),
+        foregroundColor: Colors.black87,
+        elevation: 0,
       ),
-      backgroundColor: const Color(0xFFF4F4F4), // Latar belakang abu-abu muda
-      body: Column(
-        children: [
-          // 1. Custom Tab Bar (Ambil Gambar / Upload Foto)
-          _buildTabBar(),
-
-          // 2. Konten Utama (Kamera, Upload, atau Hasil)
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: _wayangData != null
-                  ? _buildResultWidget() // Tampilkan hasil jika data ada
-                  : _buildContent(), // Tampilkan konten tab jika data kosong
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Widget untuk membuat Tab Bar
-  Widget _buildTabBar() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildTabItem("Ambil Gambar", 0),
-          _buildTabItem("Upload Foto", 1),
-        ],
-      ),
-    );
-  }
-
-  // Widget untuk satu item di Tab Bar
-  Widget _buildTabItem(String title, int index) {
-    bool isSelected = _currentTab == index;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _currentTab = index;
-          _resetState(); // Reset hasil saat ganti tab
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFB6783D) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          title,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.black54,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 20),
+            _buildAction(),
+            const SizedBox(height: 20),
+            if (_image != null) _buildPreview(),
+            if (isLoading) _buildLoading(),
+            if (result != null) _buildResult(),
+          ],
         ),
       ),
     );
   }
 
-  // Menampilkan konten berdasarkan tab yang dipilih
-  Widget _buildContent() {
-    if (_currentTab == 0) {
-      return _buildCameraMockup();
-    } else {
-      return _buildUploadMockup();
-    }
-  }
-
-  // Tampilan Mockup untuk "Ambil Gambar"
-  Widget _buildCameraMockup() {
+  // ================= HEADER =================
+  Widget _buildHeader() {
     return Container(
-      key: const ValueKey('camera'), // Key untuk animasi
-      color: Colors.black,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Tampilan pura-pura feed kamera
-          const Center(
-            child: Icon(Icons.videocam_off, color: Colors.white30, size: 100),
-          ),
-          Positioned(
-            bottom: 40,
-            child: GestureDetector(
-              onTap: () {
-                // --- NANTI: Panggil logika kamera di sini ---
-                // await ImagePicker().pickImage(source: ImageSource.camera);
-                // ... setelah dapat gambar, kirim ke server / model ML ...
-
-                // Untuk sekarang, kita panggil simulasi
-                _startIdentificationSimulation();
-              },
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-                child: const Icon(
-                  Icons.camera_alt,
-                  color: Colors.black,
-                  size: 30,
-                ),
-              ),
-            ),
-          ),
-        ],
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFB6783D), Color(0xFFD9A441)],
+        ),
+        borderRadius: BorderRadius.circular(20),
       ),
-    );
-  }
-
-  // Tampilan Mockup untuk "Upload Foto"
-  Widget _buildUploadMockup() {
-    return Container(
-      key: const ValueKey('upload'), // Key untuk animasi
-      padding: const EdgeInsets.all(32.0),
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.upload_file, size: 100, color: Colors.grey.shade400),
-          const SizedBox(height: 20),
-          const Text(
-            'Unggah gambar wayang',
-            textAlign: TextAlign.center,
+          Text(
+            "Kenali Wayangmu",
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: Colors.white,
             ),
           ),
-          const SizedBox(height: 10),
-          const Text(
-            'Ambil gambar dari galeri Anda untuk diidentifikasi.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: Colors.black54),
-          ),
-          const SizedBox(height: 30),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.image_search, color: Colors.white),
-            label: const Text(
-              'Pilih dari Galeri',
-              style: TextStyle(color: Colors.white),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFB6783D),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
-              ),
-            ),
-            onPressed: () {
-              // --- NANTI: Panggil logika file picker di sini ---
-              // await ImagePicker().pickImage(source: ImageSource.gallery);
-              // ... setelah dapat gambar, kirim ke server / model ML ...
-
-              // Untuk sekarang, kita panggil simulasi
-              _startIdentificationSimulation();
-            },
+          SizedBox(height: 8),
+          Text(
+            "Ambil foto atau unggah gambar wayang untuk diprediksi oleh AI.",
+            style: TextStyle(color: Colors.white70),
           ),
         ],
       ),
     );
   }
 
-  // Widget untuk menampilkan HASIL IDENTIFIKASI
-  Widget _buildResultWidget() {
-    // Tampilkan error jika data tidak valid (seharusnya tidak terjadi)
-    if (_imagePath == null || _wayangData == null) {
-      return const Center(child: Text('Terjadi kesalahan'));
-    }
+  // ================= ACTION =================
+  Widget _buildAction() {
+    return Row(
+      children: [
+        Expanded(
+          child: _actionButton(
+            icon: Icons.camera_alt,
+            label: "Kamera",
+            onTap: () => pickImage(ImageSource.camera),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _actionButton(
+            icon: Icons.image,
+            label: "Upload",
+            onTap: () => pickImage(ImageSource.gallery),
+          ),
+        ),
+      ],
+    );
+  }
 
-    return Container(
-      key: const ValueKey('result'), // Key untuk animasi
-      width: double.infinity,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+  Widget _actionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 22),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+          ],
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 36, color: const Color(0xFFB6783D)),
+            const SizedBox(height: 10),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ================= PREVIEW =================
+  Widget _buildPreview() {
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: Container(
+        margin: const EdgeInsets.only(top: 20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Image.file(_image!, fit: BoxFit.cover),
+        ),
+      ),
+    );
+  }
+
+  // ================= LOADING =================
+  Widget _buildLoading() {
+    return const Padding(
+      padding: EdgeInsets.all(20),
+      child: CircularProgressIndicator(),
+    );
+  }
+
+  // ================= RESULT =================
+  Widget _buildResult() {
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: Container(
+        margin: const EdgeInsets.only(top: 20),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+          ],
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Gambar Hasil
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16.0),
-                child: Image.asset(
-                  _imagePath!,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  // Error builder jika asset tidak ditemukan
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 200,
-                      color: Colors.grey.shade300,
-                      child: Center(
-                        child: Text(
-                          "Gambar tidak ditemukan.\nPastikan Anda menambahkan\n$_imagePath\ndi pubspec.yaml",
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
+            const Text(
+              "Hasil Prediksi",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 24),
-
-            // Teks Hasil
+            const SizedBox(height: 12),
             Text(
-              'Nama: ${_wayangData!['nama']}',
+              result!['prediksi'],
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: Color(0xFFB6783D),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
+            Text("Akurasi: ${result!['confidence']}"),
+            const Divider(height: 30),
             Text(
-              'Asal: ${_wayangData!['asal']}',
-              style: const TextStyle(
-                fontSize: 16,
-                fontStyle: FontStyle.italic,
-                color: Colors.black54,
-              ),
-            ),
-            const Divider(height: 32),
-            Text(
-              _wayangData!['sejarah']!,
-              style: const TextStyle(
-                fontSize: 15,
-                height: 1.5, // Jarak antar baris
-                color: Colors.black87,
-              ),
+              result!['deskripsi'],
+              style: const TextStyle(height: 1.5),
             ),
           ],
         ),
