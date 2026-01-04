@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'quiz_question_page.dart'; // import halaman kedua
+import 'leaderboard_page.dart'; // import leaderboard page
 
 class QuizPage extends StatelessWidget {
   const QuizPage({Key? key}) : super(key: key);
@@ -48,12 +49,21 @@ class QuizPage extends StatelessWidget {
         ),
         title: const Text(
           'Quiz',
-          style: TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.leaderboard, color: Colors.brown),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LeaderboardPage()),
+              );
+            },
+            tooltip: 'Leaderboard',
+          ),
+        ],
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(20),
@@ -66,15 +76,33 @@ class QuizPage extends StatelessWidget {
             quote: quiz['quote'] as String,
             color: quiz['color'] as Color,
             imagePath: quiz['image'] as String,
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => QuizQuestionPage(
-                    level: quiz['level'] as String,
-                  ),
+                  builder: (context) =>
+                      QuizQuestionPage(level: quiz['level'] as String),
                 ),
               );
+
+              // If quiz was completed, show success message and navigate to leaderboard
+              if (result == true && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      '🎉 Quiz selesai! Skor Anda telah disimpan di leaderboard',
+                    ),
+                    backgroundColor: Colors.green,
+                    duration: Duration(seconds: 3),
+                  ),
+                );
+
+                // Navigate to leaderboard to show updated scores
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LeaderboardPage()),
+                );
+              }
             },
           );
         },
@@ -184,11 +212,7 @@ class QuizCard extends StatelessWidget {
             flex: 2,
             child: Align(
               alignment: Alignment.centerRight,
-              child: Image.asset(
-                imagePath,
-                height: 100,
-                fit: BoxFit.contain,
-              ),
+              child: Image.asset(imagePath, height: 100, fit: BoxFit.contain),
             ),
           ),
         ],
