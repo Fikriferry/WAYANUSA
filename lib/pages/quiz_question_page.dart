@@ -13,6 +13,11 @@ class QuizQuestionPage extends StatefulWidget {
 }
 
 class _QuizQuestionPageState extends State<QuizQuestionPage> {
+  // Palet Warna Wayanusa
+  final Color primaryColor = const Color(0xFFD4A373);
+  final Color secondaryColor = const Color(0xFF4B3425);
+  final Color surfaceColor = const Color(0xFFF9F9F9);
+
   int currentQuestionIndex = 0;
   int selectedIndex = -1;
   int timeLeft = 30;
@@ -22,8 +27,7 @@ class _QuizQuestionPageState extends State<QuizQuestionPage> {
   bool isLoading = true;
   List<Map<String, dynamic>> questions = [];
   String errorMessage = '';
-  List<Map<String, dynamic>> userAnswers =
-      []; // Track user answers for submission
+  List<Map<String, dynamic>> userAnswers = [];
 
   @override
   void initState() {
@@ -36,10 +40,8 @@ class _QuizQuestionPageState extends State<QuizQuestionPage> {
       final levelId = _getLevelId(widget.level);
       final questionsData = await QuizApi.getQuestions(levelId);
 
-      // Transform the data to match our expected format
       final transformedQuestions = (questionsData['questions'] as List<dynamic>)
           .map((q) {
-            // Convert correct_answer from letter (a,b,c,d) to index (0,1,2,3)
             final correctAnswerLetter = q['correct_answer']
                 .toString()
                 .toLowerCase();
@@ -70,26 +72,28 @@ class _QuizQuestionPageState extends State<QuizQuestionPage> {
           })
           .toList();
 
-      setState(() {
-        questions = transformedQuestions;
-        isLoading = false;
-      });
-
-      // Start timer after questions are loaded
-      startTimer();
+      if (mounted) {
+        setState(() {
+          questions = transformedQuestions;
+          isLoading = false;
+        });
+        startTimer();
+      }
     } catch (e) {
-      setState(() {
-        errorMessage = 'Gagal memuat pertanyaan: $e';
-        isLoading = false;
-      });
-      print('Error loading questions: $e');
+      if (mounted) {
+        setState(() {
+          errorMessage = 'Gagal memuat: $e';
+          isLoading = false;
+        });
+      }
     }
   }
 
   void startTimer() {
     timer?.cancel();
-    timeLeft = 30;
+    setState(() => timeLeft = 30);
     timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return;
       if (timeLeft > 0) {
         setState(() => timeLeft--);
       } else {
@@ -101,38 +105,45 @@ class _QuizQuestionPageState extends State<QuizQuestionPage> {
   }
 
   Future<bool> _onWillPop() async {
-    bool? exit = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Konfirmasi"),
-        content: const Text("Apakah Anda yakin ingin keluar / berhenti kuis?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text("Tidak"),
+    return await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Text(
+              "Keluar Kuis?",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: const Text("Progres Anda saat ini tidak akan disimpan."),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text("Lanjut Main"),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                ),
+                child: const Text(
+                  "Keluar",
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text("Ya"),
-          ),
-        ],
-      ),
-    );
-    return exit ?? false;
+        ) ??
+        false;
   }
 
   void showAnswerDialog(bool isCorrect, int selectedAnswerIndex) {
     final correctAnswer =
         questions[currentQuestionIndex]["options"][questions[currentQuestionIndex]["answer"]];
-    final selectedAnswer = selectedAnswerIndex != -1
-        ? questions[currentQuestionIndex]["options"][selectedAnswerIndex]
-        : "Tidak menjawab";
 
-    // Record user answer for submission
+    // Simpan jawaban user
     final userAnswerLetter = selectedAnswerIndex != -1
-        ? String.fromCharCode(
-            97 + selectedAnswerIndex,
-          ) // Convert index to letter (0=a, 1=b, etc.)
+        ? String.fromCharCode(97 + selectedAnswerIndex)
         : "";
 
     userAnswers.add({
@@ -144,35 +155,78 @@ class _QuizQuestionPageState extends State<QuizQuestionPage> {
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      barrierDismissible: false,
+      builder: (_) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          isCorrect ? "Benar!" : "Salah!",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: isCorrect ? Colors.green : Colors.red,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon Animasi
+              Container(
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: isCorrect
+                      ? Colors.green.withOpacity(0.1)
+                      : Colors.red.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isCorrect ? Icons.check_rounded : Icons.close_rounded,
+                  color: isCorrect ? Colors.green : Colors.red,
+                  size: 50,
+                ),
+              ),
+              const SizedBox(height: 15),
+              Text(
+                isCorrect ? "Jawaban Benar!" : "Yah, Salah!",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: isCorrect ? Colors.green[700] : Colors.red[700],
+                ),
+              ),
+              const SizedBox(height: 10),
+              if (!isCorrect) ...[
+                const Text(
+                  "Jawaban yang benar adalah:",
+                  style: TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  correctAnswer,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 25),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    goToNextQuestion();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: secondaryColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text(
+                    "Lanjut",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              isCorrect
-                  ? "Jawaban benar: $correctAnswer"
-                  : "Jawaban kamu: $selectedAnswer\nJawaban benar: $correctAnswer",
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              goToNextQuestion();
-            },
-            child: const Text("Lanjut"),
-          ),
-        ],
       ),
     );
   }
@@ -180,66 +234,104 @@ class _QuizQuestionPageState extends State<QuizQuestionPage> {
   void showFinalScore() async {
     int nilai = (benar / questions.length * 100).round();
 
-    // Submit score to backend
+    // Submit ke backend
     try {
       final profile = await ApiService.getProfile();
       if (profile != null) {
-        final userId = profile['id'];
-        final levelId = _getLevelId(widget.level);
-
-        print("Submitting quiz for user $userId, level $levelId, score $nilai");
-        print("User answers: $userAnswers");
-
-        final result = await QuizApi.submitQuiz(
-          userId: userId,
-          levelId: levelId,
+        await QuizApi.submitQuiz(
+          userId: profile['id'],
+          levelId: _getLevelId(widget.level),
           score: nilai,
           totalQuestions: questions.length,
           userAnswers: userAnswers,
         );
-
-        print("Quiz submission result: $result");
-      } else {
-        print("Profile is null, cannot submit quiz");
       }
     } catch (e) {
-      print("Error submitting quiz: $e");
+      debugPrint("Gagal submit skor: $e");
     }
+
+    if (!mounted) return;
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      barrierDismissible: false,
+      builder: (_) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          "Kuis Selesai!",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text("Benar: $benar"),
-            Text("Salah: $salah"),
-            const SizedBox(height: 10),
-            Text(
-              "Nilai Kamu: $nilai",
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: Colors.brown,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                "assets/icon_quiz.png",
+                height: 80,
+              ), // Pastikan icon ini ada atau ganti Icon
+              const SizedBox(height: 20),
+              const Text(
+                "Kuis Selesai!",
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
-            ),
-          ],
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _scoreBadge(Icons.check_circle, Colors.green, "$benar"),
+                  const SizedBox(width: 20),
+                  _scoreBadge(Icons.cancel, Colors.red, "$salah"),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Text("Total Skor", style: TextStyle(color: Colors.grey[600])),
+              Text(
+                "$nilai",
+                style: TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
+              const SizedBox(height: 30),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context); // Tutup Dialog
+                    Navigator.pop(context, true); // Kembali ke Menu Kuis
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: secondaryColor,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    "Selesai",
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(
-                context,
-                true,
-              ); // Return true to indicate quiz completed
-            },
-            child: const Text("Tutup"),
+      ),
+    );
+  }
+
+  Widget _scoreBadge(IconData icon, Color color, String val) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 5),
+          Text(
+            val,
+            style: TextStyle(fontWeight: FontWeight.bold, color: color),
           ),
         ],
       ),
@@ -280,222 +372,296 @@ class _QuizQuestionPageState extends State<QuizQuestionPage> {
     super.dispose();
   }
 
+  // ===================== UI BUILDER =====================
+
   @override
   Widget build(BuildContext context) {
+    // Hitung progress (0.0 s/d 1.0)
+    double progress = questions.isNotEmpty
+        ? (currentQuestionIndex + 1) / questions.length
+        : 0.0;
+
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-        backgroundColor: Colors.brown.shade50,
-        appBar: AppBar(
-          backgroundColor: Colors.brown.shade700,
-          title: Text(widget.level),
-          centerTitle: true,
-          elevation: 4,
-        ),
-        body: isLoading
-            ? const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+        backgroundColor: surfaceColor,
+        body: SafeArea(
+          child: isLoading
+              ? Center(child: CircularProgressIndicator(color: primaryColor))
+              : errorMessage.isNotEmpty
+              ? _buildErrorState()
+              : questions.isEmpty
+              ? const Center(child: Text("Soal belum tersedia"))
+              : Column(
                   children: [
-                    CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.brown),
+                    // 1. HEADER (Back & Progress)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded),
+                            color: Colors.grey,
+                            onPressed: () async {
+                              // 1. Panggil dialog konfirmasi
+                              final shouldPop = await _onWillPop();
+
+                              // 2. Jika user pilih "Keluar" (true), tutup halaman ini secara manual
+                              if (shouldPop == true && context.mounted) {
+                                Navigator.of(context).pop();
+                              }
+                            },
+                          ),
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: LinearProgressIndicator(
+                                value: progress,
+                                backgroundColor: Colors.grey[300],
+                                color: primaryColor,
+                                minHeight: 8,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            "${currentQuestionIndex + 1}/${questions.length}",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    SizedBox(height: 16),
-                    Text(
-                      'Memuat pertanyaan...',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.brown,
-                        fontWeight: FontWeight.w500,
+
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            // 2. TIMER BADGE
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: timeLeft <= 10
+                                    ? Colors.redAccent
+                                    : secondaryColor,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        (timeLeft <= 10
+                                                ? Colors.red
+                                                : secondaryColor)
+                                            .withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.timer_outlined,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    "$timeLeft detik",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 30),
+
+                            // 3. QUESTION CARD
+                            Text(
+                              questions[currentQuestionIndex]["question"],
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: secondaryColor,
+                                height: 1.3,
+                              ),
+                            ),
+
+                            const SizedBox(height: 40),
+
+                            // 4. OPTIONS LIST
+                            ...List.generate(
+                              questions[currentQuestionIndex]["options"].length,
+                              (index) => _buildOptionCard(index),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // 5. SUBMIT BUTTON
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        border: Border(
+                          top: BorderSide(color: Color(0xFFEEEEEE)),
+                        ),
+                      ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: selectedIndex == -1
+                              ? null // Disable jika belum pilih
+                              : () {
+                                  timer?.cancel();
+                                  final correctIndex =
+                                      questions[currentQuestionIndex]["answer"]
+                                          as int;
+                                  bool isCorrect =
+                                      selectedIndex == correctIndex;
+                                  if (isCorrect)
+                                    benar++;
+                                  else
+                                    salah++;
+                                  showAnswerDialog(isCorrect, selectedIndex);
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: secondaryColor,
+                            disabledBackgroundColor: Colors.grey[300],
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            "Kirim Jawaban",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
-              )
-            : errorMessage.isNotEmpty
-            ? Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: Colors.red,
-                        size: 64,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        errorMessage,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 16, color: Colors.red),
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            isLoading = true;
-                            errorMessage = '';
-                          });
-                          loadQuestions();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.brown.shade700,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
-                        ),
-                        child: const Text(
-                          'Coba Lagi',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOptionCard(int index) {
+    final bool isSelected = selectedIndex == index;
+    final String optionText = questions[currentQuestionIndex]["options"][index];
+    // Huruf A, B, C, D
+    final String optionLetter = String.fromCharCode(65 + index);
+
+    return GestureDetector(
+      onTap: () => setState(() => selectedIndex = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? primaryColor.withOpacity(0.1) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? primaryColor : Colors.grey.shade200,
+            width: 2,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: primaryColor.withOpacity(0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+        ),
+        child: Row(
+          children: [
+            // Lingkaran Huruf (A/B/C/D)
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: isSelected ? primaryColor : Colors.grey[100],
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  optionLetter,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : Colors.grey[600],
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              )
-            : questions.isEmpty
-            ? const Center(
-                child: Text(
-                  'Tidak ada pertanyaan tersedia untuk level ini',
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-              )
-            : Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        "${currentQuestionIndex + 1}/${questions.length}",
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 10,
-                        horizontal: 20,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.brown.shade200,
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: Text(
-                        "⏳ Waktu: $timeLeft detik",
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Card(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      elevation: 4,
-                      shadowColor: Colors.brown.shade200,
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Text(
-                          questions[currentQuestionIndex]["question"],
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    ...List.generate(
-                      questions[currentQuestionIndex]["options"].length,
-                      (index) {
-                        final isSelected = selectedIndex == index;
-                        return GestureDetector(
-                          onTap: () => setState(() => selectedIndex = index),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 250),
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(16),
-                            height: 60, // ✨ fixed height untuk semua opsi
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? Colors.brown.shade400
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(15),
-                              border: Border.all(
-                                color: isSelected
-                                    ? Colors.brown
-                                    : Colors.grey.shade300,
-                                width: 2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  blurRadius: 6,
-                                  offset: const Offset(2, 2),
-                                  color: Colors.black.withOpacity(0.05),
-                                ),
-                              ],
-                            ),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                questions[currentQuestionIndex]["options"][index],
-                                style: TextStyle(
-                                  color: isSelected
-                                      ? Colors.white
-                                      : Colors.black87,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    const Spacer(),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.brown.shade700,
-                        minimumSize: const Size(double.infinity, 55),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        elevation: 4,
-                      ),
-                      onPressed: selectedIndex == -1
-                          ? null
-                          : () {
-                              final correctIndex =
-                                  questions[currentQuestionIndex]["answer"]
-                                      as int;
-                              bool isCorrect = selectedIndex == correctIndex;
-                              if (isCorrect) {
-                                benar++;
-                              } else {
-                                salah++;
-                              }
-                              timer?.cancel();
-                              showAnswerDialog(isCorrect, selectedIndex);
-                            },
-                      child: const Text(
-                        "Kirim Jawaban",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 17,
-                        ),
-                      ),
-                    ),
-                  ],
+              ),
+            ),
+            const SizedBox(width: 14),
+            // Teks Jawaban
+            Expanded(
+              child: Text(
+                optionText,
+                style: TextStyle(
+                  color: isSelected ? secondaryColor : Colors.black87,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  fontSize: 16,
                 ),
               ),
+            ),
+            // Radio Icon di Kanan
+            if (isSelected)
+              Icon(Icons.check_circle_rounded, color: primaryColor, size: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.wifi_off_rounded, size: 60, color: Colors.redAccent),
+          const SizedBox(height: 16),
+          Text(errorMessage, style: const TextStyle(color: Colors.grey)),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                isLoading = true;
+                errorMessage = '';
+              });
+              loadQuestions();
+            },
+            child: const Text("Coba Lagi"),
+          ),
+        ],
       ),
     );
   }

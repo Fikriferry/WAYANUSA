@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Untuk fitur Copy to Clipboard
 import '../services/api_service.dart';
 
 class DetailProfilePage extends StatefulWidget {
@@ -9,108 +10,168 @@ class DetailProfilePage extends StatefulWidget {
 }
 
 class _DetailProfilePageState extends State<DetailProfilePage> {
-  final idController = TextEditingController();
-  final nameController = TextEditingController();
-  final emailController = TextEditingController();
+  bool _isLoading = true;
+  
+  // Variabel untuk menampung data
+  String _id = "-";
+  String _name = "-";
+  String _email = "-";
 
-  bool isLoading = true;
+  // Palet Warna
+  final Color primaryColor = const Color(0xFFD4A373);
+  final Color secondaryColor = const Color(0xFF4B3425);
+  final Color bgColor = const Color(0xFFF9F9F9);
 
   @override
   void initState() {
     super.initState();
-    loadProfile();
+    _loadProfile();
   }
 
-  Future<void> loadProfile() async {
-    final data = await ApiService.getProfile();
-
-    if (data != null) {
-      idController.text = data['id'].toString();
-      nameController.text = data['name'] ?? '-';
-      emailController.text = data['email'] ?? '-';
+  Future<void> _loadProfile() async {
+    try {
+      final data = await ApiService.getProfile();
+      if (mounted && data != null) {
+        setState(() {
+          _id = data['id'].toString();
+          _name = data['name'] ?? 'Tanpa Nama';
+          _email = data['email'] ?? 'Tidak ada email';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
     }
-
-    setState(() => isLoading = false);
   }
 
-  @override
-  void dispose() {
-    idController.dispose();
-    nameController.dispose();
-    emailController.dispose();
-    super.dispose();
+  // Fungsi Copy Text (Fitur tambahan agar interaktif)
+  void _copyToClipboard(String text, String label) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("$label berhasil disalin!"),
+        duration: const Duration(seconds: 1),
+        backgroundColor: secondaryColor,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: bgColor,
       appBar: AppBar(
-        title: const Text("Profil Saya"),
+        title: const Text(
+          "Detail Profil",
+          style: TextStyle(color: Color(0xFF4B3425), fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
-        elevation: 1,
+        backgroundColor: bgColor,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF4B3425)),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator(color: primaryColor))
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
               child: Column(
                 children: [
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
 
-                  // ===== AVATAR =====
-                  const CircleAvatar(
-                    radius: 48,
-                    backgroundColor: Color(0xFFB6783D),
-                    child: Icon(
-                      Icons.person,
-                      size: 55,
-                      color: Colors.white,
+                  // 1. AVATAR DISPLAY (Read Only)
+                  Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: primaryColor, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: primaryColor.withOpacity(0.2),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        )
+                      ],
+                    ),
+                    child: const CircleAvatar(
+                      radius: 60,
+                      backgroundImage: NetworkImage("https://cdn-icons-png.flaticon.com/512/3135/3135715.png"),
+                      backgroundColor: Color(0xFFFFF3E0),
                     ),
                   ),
-
-                  const SizedBox(height: 12),
-
-                  const Text(
-                    "Akun Pengguna",
-                    style: TextStyle(
-                      fontSize: 18,
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Nama Besar di bawah foto
+                  Text(
+                    _name,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
+                      color: Color(0xFF4B3425),
+                    ),
+                  ),
+                  Text(
+                    "Anggota Wayanusa",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
                     ),
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 40),
 
-                  // ===== CARD DATA =====
-                  Card(
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                  // 2. INFO CARDS
+                  _buildSectionLabel("Informasi Akun"),
+                  
+                  _buildInfoTile(
+                    label: "ID Pengguna",
+                    value: _id,
+                    icon: Icons.fingerprint,
+                    enableCopy: true,
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  _buildInfoTile(
+                    label: "Nama Lengkap",
+                    value: _name,
+                    icon: Icons.person_outline,
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  _buildInfoTile(
+                    label: "Alamat Email",
+                    value: _email,
+                    icon: Icons.email_outlined,
+                    enableCopy: true,
+                  ),
+
+                  // Tambahan info visual (opsional)
+                  const SizedBox(height: 40),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: primaryColor.withOpacity(0.3)),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          _buildField(
-                            label: "User ID",
-                            icon: Icons.badge_outlined,
-                            controller: idController,
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: secondaryColor),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            "Data ini dikelola oleh sistem Wayanusa dan hanya dapat diubah melalui Admin.",
+                            style: TextStyle(color: secondaryColor, fontSize: 12),
                           ),
-                          const SizedBox(height: 16),
-
-                          _buildField(
-                            label: "Nama Lengkap",
-                            icon: Icons.person_outline,
-                            controller: nameController,
-                          ),
-                          const SizedBox(height: 16),
-
-                          _buildField(
-                            label: "Email",
-                            icon: Icons.email_outlined,
-                            controller: emailController,
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -119,36 +180,86 @@ class _DetailProfilePageState extends State<DetailProfilePage> {
     );
   }
 
-  Widget _buildField({
-    required String label,
-    required IconData icon,
-    required TextEditingController controller,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
+  Widget _buildSectionLabel(String label) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12, left: 4),
+        child: Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            color: Colors.grey[500],
+            fontSize: 12,
             fontWeight: FontWeight.bold,
-            color: Colors.grey,
+            letterSpacing: 1.2,
           ),
         ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: controller,
-          readOnly: true,
-          decoration: InputDecoration(
-            prefixIcon: Icon(icon),
-            filled: true,
-            fillColor: Colors.grey[200],
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+      ),
+    );
+  }
+
+  Widget _buildInfoTile({
+    required String label,
+    required String value,
+    required IconData icon,
+    bool enableCopy = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFD4A373).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: const Color(0xFFD4A373), size: 22),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.grey[500],
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Color(0xFF4B3425),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-      ],
+          if (enableCopy)
+            IconButton(
+              onPressed: () => _copyToClipboard(value, label),
+              icon: Icon(Icons.copy_rounded, color: Colors.grey[400], size: 18),
+              tooltip: "Salin $label",
+            ),
+        ],
+      ),
     );
   }
 }
