@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'leaderboard_page.dart';
 import '../services/quiz_api.dart';
 import '../services/api_service.dart';
 

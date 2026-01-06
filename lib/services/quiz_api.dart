@@ -6,7 +6,7 @@ class QuizApi {
   // Use IP address instead of localhost for mobile devices
   // Change this to your computer's IP address when testing on mobile
   static const String baseUrl =
-      "http://192.168.100.57:8000"; // Your computer's IP address
+      "http://192.168.1.17:8000"; // Your computer's IP address
 
   // Get quiz levels
   static Future<List<Map<String, dynamic>>> getLevels() async {

@@ -43,7 +43,7 @@ class WayanusaApp extends StatelessWidget {
         '/home': (context) => const HomeWayangPage(),
 
         // route halaman chatbot
-        '/chatbot': (context) => const ChatBotPage(),
+        '/chatbot': (context) => const ChatbotPage(),
 
         // route halaman video
         '/video': (context) => const VideoPage(),
@@ -57,7 +57,7 @@ class WayanusaApp extends StatelessWidget {
 
         '/profile': (context) => const ProfilePage(),
 
-        '/pengenalan_wayang': (context) => const PengenalanPage(),
+        '/pengenalan_wayang': (context) => const PengenalanWayangPage(),
 
         '/sejarah_wayang': (context) => const SejarahWayangPage(),
 
