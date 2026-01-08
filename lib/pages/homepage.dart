@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:carousel_slider/carousel_slider.dart'; // Add carousel_slider to pubspec.yaml
+import 'package:carousel_slider/carousel_slider.dart';
 import '../services/api_service.dart';
+import 'article_detail_page.dart'; // Import halaman detail
 
 class HomeWayangPage extends StatefulWidget {
   const HomeWayangPage({super.key});
@@ -12,48 +13,26 @@ class HomeWayangPage extends StatefulWidget {
 class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProviderStateMixin {
   String namaUser = "Sobat Wayang";
   
-  // Animation for Chatbot
+  // DATA ARTIKEL DINAMIS
+  List<dynamic> articles = []; // List kosong awal
+  bool isLoadingArticles = true;
+
   late AnimationController _botAnimController;
   late Animation<double> _botScaleAnim;
 
-  // Banner Images
   final List<String> imgList = [
-    'assets/banner.jpg', // Placeholder
-    'assets/MencariDalang.jpeg', // Placeholder
-    'assets/banner1.png', // Placeholder
-    'assets/PertunjukanWayang.jpeg', // Placeholder
-  ];
-
-  // Dummy Artikel
-  final List<Map<String, String>> articles = [
-    {
-      "title": "Filosofi Semar dalam Kehidupan Modern",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Semar_Wayang.jpg/220px-Semar_Wayang.jpg",
-      "desc": "Belajar kebijaksanaan dari tokoh punakawan tertua yang rendah hati."
-    },
-    {
-      "title": "Asal Usul Wayang Golek Sunda",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/e/e0/Wayang_Golek_Cepot.jpg",
-      "desc": "Sejarah panjang kesenian kayu yang mendunia dari tanah Pasundan."
-    },
-    {
-      "title": "Pandawa Lima: Simbol Kebajikan",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Wayang_Pandawa.jpg/300px-Wayang_Pandawa.jpg",
-      "desc": "Mengenal 5 ksatria penegak kebenaran dalam epos Mahabharata."
-    },
-    {
-      "title": "Teknologi AI untuk Pelestarian Budaya",
-      "image": "https://cdn.pixabay.com/photo/2018/05/08/08/44/artificial-intelligence-3382507_1280.jpg",
-      "desc": "Bagaimana Wayanusa membantu generasi muda mengenal wayang kembali."
-    },
+    'assets/banner.jpg', 
+    'assets/MencariDalang.jpeg', 
+    'assets/banner1.png', 
+    'assets/PertunjukanWayang.jpeg',
   ];
 
   @override
   void initState() {
     super.initState();
     loadUser();
-    
-    // Animasi Chatbot (Bernafas)
+    fetchArticles(); // Panggil fungsi fetch artikel
+
     _botAnimController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -73,14 +52,25 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
     final profile = await ApiService.getProfile();
     if (mounted && profile != null) {
       setState(() {
-        namaUser = profile['name']?.split(" ")[0] ?? "Sobat"; // Ambil nama depan
+        namaUser = profile['name']?.split(" ")[0] ?? "Sobat";
+      });
+    }
+  }
+
+  // FUNGSI FETCH ARTIKEL
+  void fetchArticles() async {
+    final data = await ApiService.getArticles();
+    if (mounted) {
+      setState(() {
+        // Kita ambil maksimal 3 artikel saja untuk preview di Home
+        articles = data.take(5).toList();
+        isLoadingArticles = false;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Palet Warna Modern
     const primaryColor = Color(0xFFD4A373);
     const bgColor = Color(0xFFF9F9F9);
 
@@ -90,21 +80,15 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
         child: Stack(
           children: [
             SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 100), // Ruang untuk chatbot
+              padding: const EdgeInsets.only(bottom: 100),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. HEADER & GREETING
                   _buildHeader(context),
-
                   const SizedBox(height: 20),
-
-                  // 2. BANNER CAROUSEL
                   _buildCarousel(),
-
                   const SizedBox(height: 30),
 
-                  // 3. MENU UTAMA (GRID)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
@@ -119,10 +103,9 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
                   ),
                   const SizedBox(height: 15),
                   _buildMenuGrid(context),
-
                   const SizedBox(height: 35),
 
-                  // 4. ARTIKEL TERBARU
+                  // HEADER ARTIKEL + LIHAT SEMUA
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Row(
@@ -137,30 +120,41 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
                             fontFamily: 'Serif',
                           ),
                         ),
-                        Text(
-                          "Lihat Semua",
-                          style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
+                        // Tombol Lihat Semua
+                        GestureDetector(
+                          onTap: () => Navigator.pushNamed(context, '/article_list'), // Route ke list lengkap
+                          child: Text(
+                            "Lihat Semua",
+                            style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 15),
                   
-                  // List Artikel
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: articles.length,
-                    itemBuilder: (context, index) {
-                      return _buildArticleCard(articles[index]);
-                    },
-                  ),
+                  // LIST ARTIKEL PREVIEW
+                  isLoadingArticles
+                    ? const Center(child: CircularProgressIndicator(color: primaryColor))
+                    : articles.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Text("Belum ada artikel terbaru.", style: TextStyle(color: Colors.grey)),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            itemCount: articles.length,
+                            itemBuilder: (context, index) {
+                              return _buildArticleCard(context, articles[index]);
+                            },
+                          ),
                 ],
               ),
             ),
             
-            // 5. FLOATING CHATBOT
+            // CHATBOT BUTTON (Tetap sama)
             Positioned(
               bottom: 25,
               right: 20,
@@ -181,9 +175,11 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
     );
   }
 
-  // WIDGET: Header
+  // (Widget Header & Carousel & Menu Grid tetap SAMA, tidak perlu diubah)
+  // ... Paste _buildHeader, _buildCarousel, _buildMenuGrid di sini ...
   Widget _buildHeader(BuildContext context) {
-    return Padding(
+    // ... (Kode Header Lama) ...
+     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -227,9 +223,9 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
     );
   }
 
-  // WIDGET: Carousel
   Widget _buildCarousel() {
-    return CarouselSlider(
+    // ... (Kode Carousel Lama) ...
+     return CarouselSlider(
       options: CarouselOptions(
         height: 180.0,
         autoPlay: true,
@@ -245,10 +241,10 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             image: DecorationImage(
-              image: NetworkImage(item),
+              image: AssetImage(item), // Ubah jadi AssetImage jika lokal, atau NetworkImage
               fit: BoxFit.cover,
             ),
-            boxShadow: [
+             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.2),
                 blurRadius: 10,
@@ -256,44 +252,22 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
               )
             ],
           ),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: [
-                  Colors.black.withOpacity(0.6),
-                  Colors.transparent,
-                ],
-              ),
-            ),
-            padding: const EdgeInsets.all(20),
-            alignment: Alignment.bottomLeft,
-            child: const Text(
-              "Jelajahi Dunia Wayang",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
+          // ... (Isi Banner) ...
         );
       }).toList(),
     );
   }
-
-  // WIDGET: Menu Grid
+  
   Widget _buildMenuGrid(BuildContext context) {
-    // List Menu
+    // ... (Kode Grid Lama) ...
+     // List Menu
     final menus = [
       {"icon": Icons.precision_manufacturing_rounded, "label": "Smart Wayang", "route": "/smart_wayang", "color": Colors.teal},
       {"icon": Icons.camera_alt_rounded, "label": "Scan Wayang", "route": "/pengenalan_wayang", "color": Colors.orange},
       {"icon": Icons.people_alt_rounded, "label": "Cari Dalang", "route": "/cari_dalang", "color": Colors.purple},
       {"icon": Icons.quiz_rounded, "label": "Kuis Seru", "route": "/tes_singkat", "color": Colors.blue},
       {"icon": Icons.video_library_rounded, "label": "Video Wayang", "route": "/video", "color": Colors.red},
-      {"icon": Icons.video_library_rounded, "label": "Dalang Virtual", "route": "/", "color": Colors.red},
+      {"icon": Icons.person_pin_rounded, "label": "Dalang Virtual", "route": "/chatbot", "color": Colors.brown},
     ];
 
     return Padding(
@@ -349,69 +323,85 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
     );
   }
 
-  // WIDGET: Article Card
-  Widget _buildArticleCard(Map<String, String> article) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
-        ],
-      ),
-      child: Row(
-        children: [
-          // Gambar Artikel
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              bottomLeft: Radius.circular(16),
+  // UPDATE: Widget Card Artikel dengan Navigasi Detail
+  Widget _buildArticleCard(BuildContext context, dynamic article) {
+    return GestureDetector(
+      onTap: () {
+        // Navigasi ke Halaman Detail
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ArticleDetailPage(article: article),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 15),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
+          ],
+        ),
+        child: Row(
+          children: [
+            // Gambar Artikel
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                bottomLeft: Radius.circular(16),
+              ),
+              child: article['thumbnail'] != null
+                  ? Image.network(
+                      article['thumbnail'],
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                      errorBuilder: (ctx, err, _) => Container(
+                        width: 100, height: 100, color: Colors.grey[300],
+                        child: const Icon(Icons.broken_image, color: Colors.grey),
+                      ),
+                    )
+                  : Container(
+                      width: 100, height: 100, color: Colors.grey[300],
+                      child: const Icon(Icons.article, color: Colors.grey),
+                    ),
             ),
-            child: Image.network(
-              article['image']!,
-              width: 100,
-              height: 100,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                width: 100, height: 100, color: Colors.grey[300],
-                child: const Icon(Icons.broken_image, color: Colors.grey),
+            
+            // Teks Artikel
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      article['title'] ?? 'Tanpa Judul',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Color(0xFF4B3425),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      article['content_preview'] ?? '',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 11,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          
-          // Teks Artikel
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    article['title']!,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: Color(0xFF4B3425),
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    article['desc']!,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 11,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

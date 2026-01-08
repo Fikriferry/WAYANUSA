@@ -7,7 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 class ApiService {
   // ================= BASE URL =================
-  static const String baseUrl = "http://192.168.1.17:8000/api";
+  static const String baseUrl = "http://192.168.100.222:8000/api";
 
   // ================= GET TOKEN =================
   static Future<String?> getToken() async {
@@ -15,7 +15,7 @@ class ApiService {
     return prefs.getString('token');
   }
 
-  // ================= REGISTER ================= 
+  // ================= REGISTER =================
   static Future<bool> register({
     required String name,
     required String email,
@@ -36,10 +36,7 @@ class ApiService {
       final res = await http.post(
         Uri.parse('$baseUrl/auth/login'),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "email": email,
-          "password": password,
-        }),
+        body: jsonEncode({"email": email, "password": password}),
       );
 
       if (res.statusCode == 200) {
@@ -65,9 +62,7 @@ class ApiService {
 
       final res = await http.get(
         Uri.parse('$baseUrl/auth/profile'),
-        headers: {
-          "Authorization": "Bearer $token",
-        },
+        headers: {"Authorization": "Bearer $token"},
       );
 
       if (res.statusCode == 200) {
@@ -101,7 +96,7 @@ class ApiService {
       );
 
       print("Mengirim request ke $uri"); // Debug log
-      
+
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
@@ -123,13 +118,13 @@ class ApiService {
     try {
       // Ambil token dulu (karena di Flask pakai jwt_required)
       final token = await getToken();
-      
+
       final response = await http.post(
         Uri.parse("$baseUrl/chat"), // Pastikan route ini benar
         headers: {
           "Content-Type": "application/json",
           // Kirim token jika ada
-          if (token != null) "Authorization": "Bearer $token", 
+          if (token != null) "Authorization": "Bearer $token",
         },
         body: jsonEncode({"message": message}),
       );
@@ -140,12 +135,48 @@ class ApiService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         // SESUAIKAN DISINI: Ambil 'response', bukan 'reply'
-        return data['response']; 
+        return data['response'];
       }
       return null;
     } catch (e) {
       debugPrint("Chat error: $e");
       return null;
+    }
+  }
+
+  // === FITUR VIDEO WAYANG ===
+  static Future<List<dynamic>> getVideos() async {
+    try {
+      final response = await http.get(Uri.parse("$baseUrl/videos"));
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        if (jsonResponse['status'] == 'success') {
+          return jsonResponse['data']; // Mengembalikan List Video
+        }
+      }
+      return []; // Return list kosong jika gagal
+    } catch (e) {
+      print("Error getVideos: $e");
+      return [];
+    }
+  }
+
+  // === FITUR ARTIKEL ===
+  static Future<List<dynamic>> getArticles() async {
+    try {
+      final response = await http.get(Uri.parse("$baseUrl/articles"));
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        if (jsonResponse['status'] == 'success') {
+          return jsonResponse['data'];
+        }
+      }
+      return [];
+    } catch (e) {
+      print("Error getArticles: $e");
+      return [];
     }
   }
 
