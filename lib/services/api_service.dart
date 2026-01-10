@@ -113,34 +113,29 @@ class ApiService {
     }
   }
 
-  // ================= CHATBOT (UPDATED) =================
-  static Future<String?> sendMessage(String message) async {
+  // ================= CHATBOT =================
+  static Future<String?> sendMessageSmart(String message, String mode) async {
     try {
-      // Ambil token dulu (karena di Flask pakai jwt_required)
-      final token = await getToken();
+      final url = Uri.parse("$baseUrl/chat-smart"); // Endpoint baru
 
       final response = await http.post(
-        Uri.parse("$baseUrl/chat"), // Pastikan route ini benar
-        headers: {
-          "Content-Type": "application/json",
-          // Kirim token jika ada
-          if (token != null) "Authorization": "Bearer $token",
-        },
-        body: jsonEncode({"message": message}),
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "message": message,
+          "mode": mode, // Kirim parameter mode
+        }),
       );
 
-      debugPrint("Chat Status: ${response.statusCode}");
-      debugPrint("Chat Body: ${response.body}");
-
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        // SESUAIKAN DISINI: Ambil 'response', bukan 'reply'
-        return data['response'];
+        final jsonResponse = jsonDecode(response.body);
+        return jsonResponse['response'];
+      } else {
+        return "Maaf, server lagi sibuk (Error ${response.statusCode})";
       }
-      return null;
     } catch (e) {
-      debugPrint("Chat error: $e");
-      return null;
+      print("Error Chatbot: $e");
+      return "Gagal terhubung ke server.";
     }
   }
 

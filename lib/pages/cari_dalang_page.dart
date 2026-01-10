@@ -21,7 +21,7 @@ class _CariDalangPageState extends State<CariDalangPage> {
 
   // URL Base untuk gambar (Sesuaikan dengan IP Flask kamu)
   // Folder static flask biasanya diakses via /static/...
-  final String imageBaseUrl = "http://192.168.100.222:8000/static/images";
+  final String imageBaseUrl = "http://192.168.100.222:8000/static/uploads";
 
   @override
   void initState() {
