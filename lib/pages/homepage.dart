@@ -267,7 +267,7 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
       {"icon": Icons.people_alt_rounded, "label": "Cari Dalang", "route": "/cari_dalang", "color": Colors.purple},
       {"icon": Icons.quiz_rounded, "label": "Kuis Seru", "route": "/tes_singkat", "color": Colors.blue},
       {"icon": Icons.video_library_rounded, "label": "Video Wayang", "route": "/video", "color": Colors.red},
-      {"icon": Icons.person_pin_rounded, "label": "Dalang Virtual", "route": "/chatbot", "color": Colors.brown},
+      {"icon": Icons.person_pin_rounded, "label": "Dalang Virtual", "route": "/simulasi_dalang", "color": Colors.brown},
     ];
 
     return Padding(
