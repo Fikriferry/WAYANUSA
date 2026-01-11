@@ -7,7 +7,8 @@ import 'package:image_picker/image_picker.dart';
 
 class ApiService {
   // ================= BASE URL =================
-  static const String baseUrl = "http://192.168.100.222:8000/api";
+  static const String baseUrl = "http://192.168.1.139:8000/api";
+
 
   // ================= GET TOKEN =================
   static Future<String?> getToken() async {

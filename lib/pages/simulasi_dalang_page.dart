@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class SimulasiDalangPage extends StatefulWidget {
   const SimulasiDalangPage({super.key});
@@ -20,9 +21,33 @@ class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
 
   bool isOverDeleteZone = false;
 
+  // Force landscape di mobile
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(Duration.zero, () {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    });
+  }
+
+  @override
+  void dispose() {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape || screenWidth > screenHeight;
 
     return Scaffold(
       backgroundColor: const Color(0xffFEFBF5),
@@ -39,16 +64,16 @@ class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
       ),
       body: Stack(
         children: [
+          // BACKGROUND
           Positioned.fill(
             child: Image.asset(
               "assets/background_panggung.png",
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) =>
-                  Container(color: const Color(0xffE8D4BE)),
+              errorBuilder: (_, __, ___) => Container(color: const Color(0xffE8D4BE)),
             ),
           ),
 
-          // semua wayang
+          // WAYANG AKTIF
           ...activeWayang.map((wayang) {
             int index = activeWayang.indexOf(wayang);
             return Positioned(
@@ -82,18 +107,15 @@ class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
                   child: Image.asset(
                     wayang['image'],
                     height: 180,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const Icon(Icons.image_not_supported,
-                            size: 120, color: Colors.grey),
+                    errorBuilder: (_, __, ___) =>
+                        const Icon(Icons.image_not_supported, size: 120, color: Colors.grey),
                   ),
                 ),
               ),
             );
           }).toList(),
 
-          // ===========================
-          // TOMBOL HAPUS & TAMBAH WAYANG
-          // ===========================
+          // CONTROL BOTTOM
           Positioned(
             left: 20,
             right: 20,
@@ -101,7 +123,6 @@ class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // tombol hapus
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   height: deleteZoneSize,
@@ -128,33 +149,37 @@ class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
                     ),
                   ),
                 ),
-
-                // tombol tambah wayang (selalu di tengah secara visual)
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xffE8D4BE),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   ),
-                  onPressed: () {
-                    _showWayangPicker(context);
-                  },
-                  icon:
-                      const Icon(Icons.theater_comedy, color: Color(0xff4B3425)),
+                  onPressed: () => _showWayangPicker(context),
+                  icon: const Icon(Icons.theater_comedy, color: Color(0xff4B3425)),
                   label: const Text(
                     "Tambah Wayang",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xff4B3425),
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xff4B3425)),
                   ),
                 ),
               ],
             ),
           ),
+
+          // OVERLAY CEK LANDSCAPE (khusus web)
+          if (!isLandscape)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.7),
+                child: const Center(
+                  child: Text(
+                    "⚠️ Silakan rotate device ke landscape",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -167,7 +192,7 @@ class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) {
+      builder: (_) {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Column(
@@ -188,14 +213,14 @@ class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
                   scrollDirection: Axis.horizontal,
                   itemCount: wayangList.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 16),
-                  itemBuilder: (context, index) {
+                  itemBuilder: (_, index) {
                     final wayang = wayangList[index];
                     return GestureDetector(
                       onTap: () {
                         setState(() {
                           activeWayang.add({
                             'image': wayang['image'],
-                            'position': const Offset(150, 300),
+                            'position': const Offset(150, 200),
                           });
                         });
                         Navigator.pop(context);
@@ -208,20 +233,13 @@ class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
                             decoration: BoxDecoration(
                               color: const Color(0xffF3E7D3),
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: const Color(0xff4B3425),
-                                width: 1,
-                              ),
+                              border: Border.all(color: const Color(0xff4B3425)),
                             ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: Image.asset(
-                                wayang["image"]!,
-                                fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    const Icon(Icons.image_not_supported,
-                                        size: 50),
-                              ),
+                            child: Image.asset(
+                              wayang["image"]!,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) =>
+                                  const Icon(Icons.image_not_supported),
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -238,7 +256,6 @@ class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
                   },
                 ),
               ),
-              const SizedBox(height: 20),
             ],
           ),
         );
