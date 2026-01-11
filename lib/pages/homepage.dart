@@ -19,7 +19,7 @@ class HomeWayangPage extends StatelessWidget {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Logo di tengah
+                    // Logo 
                     Center(
                       child: Image.asset(
                         "assets/logo.png",
@@ -29,7 +29,7 @@ class HomeWayangPage extends StatelessWidget {
                       ),
                     ),
 
-                    // Avatar di kanan atas
+                    // Avatar
                     Align(
                       alignment: Alignment.centerRight,
                       child: GestureDetector(
@@ -44,7 +44,6 @@ class HomeWayangPage extends StatelessWidget {
                 ),
               ),
 
-              // ===== WELCOME TEXT =====
               const Center(
                 child: Text(
                   "Selamat Datang, Arya",
@@ -107,7 +106,6 @@ class HomeWayangPage extends StatelessWidget {
                     "assets/icon_video.png",
                     "Pertunjukan\nWayang",
                   ),
-                  // 🟡 Tambahan: Menu Simulasi Dalang
                   _menuItem(
                     context,
                     "assets/icon_play.png",
@@ -199,7 +197,7 @@ class HomeWayangPage extends StatelessWidget {
   // ===== MENU ITEM COMPONENT =====
   Widget _menuItem(BuildContext context, String icon, String label) {
     return GestureDetector(
-      onTap: () {
+      onTap: () { 
         // === NAVIGASI UNTUK SETIAP MENU ===
         if (label == "Pengenalan\nWayang") {
           Navigator.pushNamed(context, '/pengenalan_wayang');

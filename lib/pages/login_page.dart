@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'register_page.dart';
-import 'homepage.dart'; // halaman tujuan login
+import 'homepage.dart'; 
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -13,7 +13,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  // 🔹 Fungsi Login (supaya bisa dipanggil dari Enter dan tombol)
+  // 🔹 Fungsi Login 
   void _login() {
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
@@ -96,7 +96,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 15),
 
-              // 🔹 Password Field (Enter untuk login)
+              // 🔹 Password Field 
               TextField(
                 controller: passwordController,
                 obscureText: true,
@@ -106,7 +106,7 @@ class _LoginPageState extends State<LoginPage> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                onSubmitted: (_) => _login(), // ✔ tekan Enter langsung login
+                onSubmitted: (_) => _login(), 
               ),
               const SizedBox(height: 10),
 
@@ -122,7 +122,7 @@ class _LoginPageState extends State<LoginPage> {
               // 🔹 Tombol Masuk
               Center(
                 child: ElevatedButton(
-                  onPressed: _login, // ✔ tombol login
+                  onPressed: _login, 
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFB6783D),
                     shape: RoundedRectangleBorder(

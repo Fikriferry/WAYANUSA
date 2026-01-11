@@ -89,6 +89,17 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                     ),
                     const SizedBox(height: 20),
+                    TextField(
+                      controller: passwordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: 'Kata Sandi 2',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () {},
                       style: ElevatedButton.styleFrom(
