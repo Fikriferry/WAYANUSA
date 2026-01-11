@@ -1,308 +1,407 @@
 import 'package:flutter/material.dart';
+import 'package:carousel_slider/carousel_slider.dart';
+import '../services/api_service.dart';
+import 'article_detail_page.dart'; // Import halaman detail
 
-class HomeWayangPage extends StatelessWidget {
+class HomeWayangPage extends StatefulWidget {
   const HomeWayangPage({super.key});
 
   @override
+  State<HomeWayangPage> createState() => _HomeWayangPageState();
+}
+
+class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProviderStateMixin {
+  String namaUser = "Sobat Wayang";
+  
+  // DATA ARTIKEL DINAMIS
+  List<dynamic> articles = []; // List kosong awal
+  bool isLoadingArticles = true;
+
+  late AnimationController _botAnimController;
+  late Animation<double> _botScaleAnim;
+
+  final List<String> imgList = [
+    'assets/banner.jpg', 
+    'assets/MencariDalang.jpeg', 
+    'assets/banner1.png', 
+    'assets/PertunjukanWayang.jpeg',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    loadUser();
+    fetchArticles(); // Panggil fungsi fetch artikel
+
+    _botAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+    _botScaleAnim = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(parent: _botAnimController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _botAnimController.dispose();
+    super.dispose();
+  }
+
+  void loadUser() async {
+    final profile = await ApiService.getProfile();
+    if (mounted && profile != null) {
+      setState(() {
+        namaUser = profile['name']?.split(" ")[0] ?? "Sobat";
+      });
+    }
+  }
+
+  // FUNGSI FETCH ARTIKEL
+  void fetchArticles() async {
+    final data = await ApiService.getArticles();
+    if (mounted) {
+      setState(() {
+        // Kita ambil maksimal 3 artikel saja untuk preview di Home
+        articles = data.take(5).toList();
+        isLoadingArticles = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    const primaryColor = Color(0xFFD4A373);
+    const bgColor = Color(0xFFF9F9F9);
+
     return Scaffold(
-      backgroundColor: const Color(0xffFEFBF5),
+      backgroundColor: bgColor,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ===== HEADER =====
-              SizedBox(
-                height: 50,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Logo 
-                    Center(
-                      child: Image.asset(
-                        "assets/logo.png",
-                        height: 31,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.image_not_supported, size: 31),
-                      ),
-                    ),
-
-                    // Avatar
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: GestureDetector(
-                        onTap: () => Navigator.pushNamed(context, '/profile'),
-                        child: const CircleAvatar(
-                          radius: 22,
-                          backgroundImage: AssetImage("assets/profil.png"),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const Center(
-                child: Text(
-                  "Selamat Datang, Arya",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xff4B3425),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 25),
-
-              // ===== BANNER =====
-              ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: Image.asset(
-                  "assets/banner.jpg",
-                  height: 230,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 160,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      color: Colors.grey.shade200,
-                    ),
-                    child: const Center(
-                      child: Text(
-                        "Gagal memuat banner",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 30),
-
-              // ===== 5 MENU ICON =====
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 100),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _menuItem(
-                    context,
-                    "assets/icon_scan.png",
-                    "Pengenalan\nWayang",
-                  ),
-                  _menuItem(
-                    context, 
-                    "assets/icon_quiz.png", 
-                    "Tes\nSingkat"),
-                  _menuItem(
-                    context,
-                    "assets/icon_dalang.png",
-                    "Mencari\nDalang",
-                  ),
-                  _menuItem(
-                    context,
-                    "assets/icon_video.png",
-                    "Pertunjukan\nWayang",
-                  ),
-                  _menuItem(
-                    context,
-                    "assets/icon_play.png",
-                    "Menjadi\nDalang",
-                  ),
-                ],
-              ),
+                  _buildHeader(context),
+                  const SizedBox(height: 20),
+                  _buildCarousel(),
+                  const SizedBox(height: 30),
 
-              const SizedBox(height: 35),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      "Jelajahi Wayang",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[800],
+                        fontFamily: 'Serif',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  _buildMenuGrid(context),
+                  const SizedBox(height: 35),
 
-              // ===== SEJARAH WAYANG SECTION =====
-              GestureDetector(
-                onTap: () {
-                  Navigator.pushNamed(context, '/sejarah_wayang');
-                },
-                child: Column(
-                  children: [
-                    Row(
+                  // HEADER ARTIKEL + LIHAT SEMUA
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
+                      children: [
                         Text(
-                          "Kisah Sejarah Wayang Kulit",
+                          "Wawasan Budaya",
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xff4B3425),
+                            color: Colors.grey[800],
+                            fontFamily: 'Serif',
                           ),
                         ),
-                        Text(
-                          "Selengkapnya",
-                          style: TextStyle(fontSize: 13, color: Colors.grey),
+                        // Tombol Lihat Semua
+                        GestureDetector(
+                          onTap: () => Navigator.pushNamed(context, '/article_list'), // Route ke list lengkap
+                          child: Text(
+                            "Lihat Semua",
+                            style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
+                  ),
+                  const SizedBox(height: 15),
+                  
+                  // LIST ARTIKEL PREVIEW
+                  isLoadingArticles
+                    ? const Center(child: CircularProgressIndicator(color: primaryColor))
+                    : articles.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Text("Belum ada artikel terbaru.", style: TextStyle(color: Colors.grey)),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            itemCount: articles.length,
+                            itemBuilder: (context, index) {
+                              return _buildArticleCard(context, articles[index]);
+                            },
+                          ),
+                ],
+              ),
+            ),
+            
+            // CHATBOT BUTTON (Tetap sama)
+            Positioned(
+              bottom: 25,
+              right: 20,
+              child: ScaleTransition(
+                scale: _botScaleAnim,
+                child: FloatingActionButton.extended(
+                  onPressed: () => Navigator.pushNamed(context, '/chatbot'),
+                  backgroundColor: const Color(0xFF4B3425),
+                  icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+                  label: const Text("Tanya ChatPot", style: TextStyle(color: Colors.white)),
+                  elevation: 10,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                    SizedBox(
-                      height: 180,
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        child: Row(
-                          children: [
-                            _buildSejarahCard(
-                              context,
-                              'assets/mahabarata_banner.jpeg',
-                              'Kisah Mahabharata',
-                            ),
-                            _buildSejarahCard(
-                              context,
-                              'assets/mahabarata_banner.jpeg',
-                              'Kisah Ramayana',
-                            ),
-                            _buildSejarahCard(
-                              context,
-                              'assets/mahabarata_banner.jpeg',
-                              'Cerita Punakawan',
-                            ),
-                          ],
-                        ),
+  // (Widget Header & Carousel & Menu Grid tetap SAMA, tidak perlu diubah)
+  // ... Paste _buildHeader, _buildCarousel, _buildMenuGrid di sini ...
+  Widget _buildHeader(BuildContext context) {
+    // ... (Kode Header Lama) ...
+     return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Selamat Datang, 👋",
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                namaUser,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF4B3425),
+                  fontFamily: 'Serif',
+                ),
+              ),
+            ],
+          ),
+          GestureDetector(
+            onTap: () => Navigator.pushNamed(context, '/profile'),
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                border: Border.all(color: const Color(0xFFD4A373), width: 2),
+                shape: BoxShape.circle,
+              ),
+              child: const CircleAvatar(
+                radius: 22,
+                backgroundImage: NetworkImage("https://cdn-icons-png.flaticon.com/512/3135/3135715.png"),
+                backgroundColor: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCarousel() {
+    // ... (Kode Carousel Lama) ...
+     return CarouselSlider(
+      options: CarouselOptions(
+        height: 180.0,
+        autoPlay: true,
+        enlargeCenterPage: true,
+        viewportFraction: 0.9,
+        aspectRatio: 16/9,
+        autoPlayCurve: Curves.fastOutSlowIn,
+      ),
+      items: imgList.map((item) {
+        return Container(
+          width: 1000,
+          margin: const EdgeInsets.symmetric(horizontal: 5.0),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            image: DecorationImage(
+              image: AssetImage(item), // Ubah jadi AssetImage jika lokal, atau NetworkImage
+              fit: BoxFit.cover,
+            ),
+             boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              )
+            ],
+          ),
+          // ... (Isi Banner) ...
+        );
+      }).toList(),
+    );
+  }
+  
+  Widget _buildMenuGrid(BuildContext context) {
+    // ... (Kode Grid Lama) ...
+     // List Menu
+    final menus = [
+      {"icon": Icons.precision_manufacturing_rounded, "label": "Smart Wayang", "route": "/smart_wayang", "color": Colors.teal},
+      {"icon": Icons.camera_alt_rounded, "label": "Scan Wayang", "route": "/pengenalan_wayang", "color": Colors.orange},
+      {"icon": Icons.people_alt_rounded, "label": "Cari Dalang", "route": "/cari_dalang", "color": Colors.purple},
+      {"icon": Icons.quiz_rounded, "label": "Kuis Seru", "route": "/tes_singkat", "color": Colors.blue},
+      {"icon": Icons.video_library_rounded, "label": "Video Wayang", "route": "/video", "color": Colors.red},
+      {"icon": Icons.person_pin_rounded, "label": "Dalang Virtual", "route": "/chatbot", "color": Colors.brown},
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2, // 2 Kolom agar besar
+          childAspectRatio: 2.5, // Lebar : Tinggi
+          crossAxisSpacing: 15,
+          mainAxisSpacing: 15,
+        ),
+        itemCount: menus.length,
+        itemBuilder: (context, index) {
+          final menu = menus[index];
+          return GestureDetector(
+            onTap: () {
+              Navigator.pushNamed(context, menu['route'] as String);
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))
+                ],
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 15),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: (menu['color'] as Color).withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(menu['icon'] as IconData, color: menu['color'] as Color, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      menu['label'] as String,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // UPDATE: Widget Card Artikel dengan Navigasi Detail
+  Widget _buildArticleCard(BuildContext context, dynamic article) {
+    return GestureDetector(
+      onTap: () {
+        // Navigasi ke Halaman Detail
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ArticleDetailPage(article: article),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 15),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
+          ],
+        ),
+        child: Row(
+          children: [
+            // Gambar Artikel
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                bottomLeft: Radius.circular(16),
+              ),
+              child: article['thumbnail'] != null
+                  ? Image.network(
+                      article['thumbnail'],
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                      errorBuilder: (ctx, err, _) => Container(
+                        width: 100, height: 100, color: Colors.grey[300],
+                        child: const Icon(Icons.broken_image, color: Colors.grey),
                       ),
+                    )
+                  : Container(
+                      width: 100, height: 100, color: Colors.grey[300],
+                      child: const Icon(Icons.article, color: Colors.grey),
+                    ),
+            ),
+            
+            // Teks Artikel
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      article['title'] ?? 'Tanpa Judul',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Color(0xFF4B3425),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      article['content_preview'] ?? '',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 11,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-
-              const SizedBox(height: 70),
-            ],
-          ),
+            ),
+          ],
         ),
-      ),
-
-      // ===== FLOATING CHATBOT =====
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xffE8D4BE),
-        onPressed: () {
-          Navigator.pushNamed(context, '/chatbot');
-        },
-        child: Image.asset(
-          "assets/icon_robot.png",
-          height: 30,
-          errorBuilder: (context, error, stackTrace) =>
-              const Icon(Icons.smart_toy_outlined),
-        ),
-      ),
-    );
-  }
-
-  // ===== MENU ITEM COMPONENT =====
-  Widget _menuItem(BuildContext context, String icon, String label) {
-    return GestureDetector(
-      onTap: () { 
-        // === NAVIGASI UNTUK SETIAP MENU ===
-        if (label == "Pengenalan\nWayang") {
-          Navigator.pushNamed(context, '/pengenalan_wayang');
-        } else if (label == "Tes\nSingkat") {
-          Navigator.pushNamed(context, '/tes_singkat');
-        } else if (label == "Mencari\nDalang") {
-          Navigator.pushNamed(context, '/cari_dalang');
-        } else if (label == "Pertunjukan\nWayang") {
-          Navigator.pushNamed(context, '/video');
-        } else if (label == "Menjadi\nDalang") {
-          // 🟡 Navigasi ke halaman simulasi dalang
-          Navigator.pushNamed(context, '/simulasi_dalang');
-        }
-      },
-      child: Column(
-        children: [
-          Container(
-            height: 56,
-            width: 56,
-            decoration: BoxDecoration(
-              color: const Color(0xffF3E7D3),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Center(
-              child: Image.asset(
-                icon,
-                height: 30,
-                errorBuilder: (context, error, stackTrace) =>
-                    const Icon(Icons.image_not_supported, size: 30),
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: Color(0xff4B3425),
-              height: 1.2,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- KARTU SEJARAH ---
-  Widget _buildSejarahCard(
-    BuildContext context,
-    String imagePath,
-    String title,
-  ) {
-    return Container(
-      width: 250,
-      margin: const EdgeInsets.only(right: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xffF3E7D3),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(14),
-              topRight: Radius.circular(14),
-            ),
-            child: Image.asset(
-              imagePath,
-              height: 120,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                height: 120,
-                width: double.infinity,
-                color: Colors.grey.shade300,
-                child: const Center(
-                  child: Icon(Icons.image_not_supported, color: Colors.grey),
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Color(0xff4B3425),
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
       ),
     );
   }
