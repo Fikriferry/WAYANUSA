@@ -4,10 +4,11 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
+import '../config.dart';
 
 class ApiService {
   // ================= BASE URL =================
-  static const String baseUrl = "http://192.168.100.222:8000/api";
+  static const String baseUrl = AppConfig.apiUrl;
 
   // ================= GET TOKEN =================
   static Future<String?> getToken() async {
@@ -22,7 +23,7 @@ class ApiService {
     required String password,
   }) async {
     final response = await http.post(
-      Uri.parse("$baseUrl/api/auth/register"),
+      Uri.parse("$baseUrl/auth/register"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({"name": name, "email": email, "password": password}),
     );
