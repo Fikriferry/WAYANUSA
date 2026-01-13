@@ -4,7 +4,7 @@ class AppConfig {
   // ============================================================
   // 🟢 CUKUP UBAH IP INI SAJA SETIAP GANTI WIFI / TEMPAT
   // ============================================================
-  static const String serverIp = "192.168.56.157"; 
+  static const String serverIp = "192.168.48.150"; 
   // ============================================================
 
   static const String port = "8000";

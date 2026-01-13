@@ -8,7 +8,7 @@ import '../config.dart';
 
 class ApiService {
   // ================= BASE URL =================
-  static const String baseUrl = AppConfig.apiUrl;
+  static const String baseUrl = "http://192.168.48.150:8000/api";
 
   // ================= GET TOKEN =================
   static Future<String?> getToken() async {

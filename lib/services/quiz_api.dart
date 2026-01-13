@@ -6,7 +6,7 @@ import '../config.dart';
 class QuizApi {
   // Use IP address instead of localhost for mobile devices
   // Change this to your computer's IP address when testing on mobile
-  static const String baseUrl = AppConfig.baseUrl; // Your computer's IP address
+  static const String baseUrl = "http://192.168.48.150:8000"; // Your computer's IP address
 
   // Get quiz levels
   static Future<List<Map<String, dynamic>>> getLevels() async {
