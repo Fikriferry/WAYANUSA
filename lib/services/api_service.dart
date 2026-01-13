@@ -4,244 +4,183 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
+import '../config.dart';
+
 class ApiService {
   // ================= BASE URL =================
-  static const String baseUrl = "http://192.168.100.132:8000";
+  static const String baseUrl = "http://192.168.48.150:8000/api";
 
-
-  // ================= TOKEN =================
-  // Mengambil token login yang tersimpan di SharedPreferences
+  // ================= GET TOKEN =================
   static Future<String?> getToken() async {
-    // Ambil instance SharedPreferences
     final prefs = await SharedPreferences.getInstance();
-
-    // Ambil value dengan key 'token'
     return prefs.getString('token');
   }
 
-
   // ================= REGISTER =================
-  // Fungsi untuk mendaftarkan user baru
   static Future<bool> register({
     required String name,
     required String email,
     required String password,
   }) async {
-    try {
-      // Kirim request POST ke endpoint register
-      final res = await http.post(
-        Uri.parse("$baseUrl/api/auth/register"),
+    final response = await http.post(
+      Uri.parse("$baseUrl/auth/register"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"name": name, "email": email, "password": password}),
+    );
 
-        // Header menyatakan body berupa JSON
-        headers: {"Content-Type": "application/json"},
-
-        // Data dikirim dalam bentuk JSON
-        body: jsonEncode({
-          "name": name,
-          "email": email,
-          "password": password,
-        }),
-      );
-
-      // Log response dari server
-      debugPrint("REGISTER ${res.statusCode}: ${res.body}");
-
-      // Jika status 201 → register sukses
-      return res.statusCode == 201;
-    } catch (e) {
-      // Jika error (server mati / koneksi gagal)
-      debugPrint("REGISTER ERROR: $e");
-      return false;
-    }
+    return response.statusCode == 201;
   }
-
 
   // ================= LOGIN =================
-  // Fungsi login user
   static Future<bool> login(String email, String password) async {
     try {
-      // Kirim POST ke endpoint login
       final res = await http.post(
-        Uri.parse("$baseUrl/api/auth/login"),
+        Uri.parse('$baseUrl/auth/login'),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "email": email,
-          "password": password,
-        }),
+        body: jsonEncode({"email": email, "password": password}),
       );
 
-      // Log response
-      debugPrint("LOGIN ${res.statusCode}: ${res.body}");
-
-      // Jika login berhasil
       if (res.statusCode == 200) {
-        // Decode JSON response
         final data = jsonDecode(res.body);
-
-        // Simpan token ke SharedPreferences
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', data['access_token']);
-
         return true;
       }
+
+      debugPrint("Login error: ${res.body}");
       return false;
     } catch (e) {
-      debugPrint("LOGIN ERROR: $e");
+      debugPrint("Login exception: $e");
       return false;
     }
   }
 
-
-  // ================= PROFILE =================
-  // Mengambil data profile user yang sedang login
+  // ================= GET PROFILE =================
   static Future<Map<String, dynamic>?> getProfile() async {
     try {
-      // Ambil token login
       final token = await getToken();
-
-      // Jika belum login, hentikan proses
       if (token == null) return null;
 
-      // Request GET ke endpoint profile
       final res = await http.get(
-        Uri.parse("$baseUrl/api/auth/profile"),
-        headers: {
-          // Token dikirim via Authorization Bearer
-          "Authorization": "Bearer $token",
-        },
+        Uri.parse('$baseUrl/auth/profile'),
+        headers: {"Authorization": "Bearer $token"},
       );
 
-      debugPrint("PROFILE ${res.statusCode}: ${res.body}");
-
-      // Jika sukses, return data profile
       if (res.statusCode == 200) {
         return jsonDecode(res.body);
       }
+
+      debugPrint("Profile error: ${res.body}");
       return null;
     } catch (e) {
-      debugPrint("PROFILE ERROR: $e");
+      debugPrint("Profile exception: $e");
       return null;
     }
   }
 
-
-  // ================= LOGOUT =================
-  // Menghapus token login dari SharedPreferences
-  static Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
-  }
-
-
   // ================= PREDICT WAYANG =================
-  // Mengirim gambar ke backend untuk AI prediksi wayang
   static Future<Map<String, dynamic>?> predictWayang(XFile image) async {
     try {
-      // Endpoint AI predict
-      final uri = Uri.parse("$baseUrl/api/predict-wayang");
+      final uri = Uri.parse('$baseUrl/predict-wayang');
+      final request = http.MultipartRequest('POST', uri);
 
-      // Gunakan MultipartRequest karena kirim file
-      final request = http.MultipartRequest("POST", uri);
-
-      // Baca isi file gambar menjadi byte
+      // BACA GAMBAR SEBAGAI BYTES (Agar support Web & Mobile)
       final bytes = await image.readAsBytes();
 
-      // Tambahkan file gambar ke request
       request.files.add(
         http.MultipartFile.fromBytes(
-          'image',            // nama field di backend
-          bytes,              // isi file
-          filename: image.name,
+          'image',
+          bytes,
+          filename: image.name, // Ambil nama file asli
           contentType: MediaType('image', 'jpeg'),
         ),
       );
 
-      // Kirim request ke server
-      final streamed = await request.send();
+      print("Mengirim request ke $uri"); // Debug log
 
-      // Ambil response dari stream
-      final response = await http.Response.fromStream(streamed);
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
-      debugPrint("PREDICT ${response.statusCode}: ${response.body}");
+      print("Status Code: ${response.statusCode}");
+      print("Response Body: ${response.body}");
 
-      // Jika sukses, kembalikan hasil prediksi
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
       return null;
     } catch (e) {
-      debugPrint("PREDICT ERROR: $e");
+      print("Error predict: $e");
       return null;
     }
   }
 
-
   // ================= CHATBOT =================
-  // Mengirim pesan ke chatbot AI
   static Future<String?> sendMessageSmart(String message, String mode) async {
     try {
-      final res = await http.post(
-        Uri.parse("$baseUrl/api/chat-smart"),
+      final url = Uri.parse("$baseUrl/chat-smart"); // Endpoint baru
+
+      final response = await http.post(
+        url,
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "message": message, // isi chat user
-          "mode": mode,       // mode AI (misal: wayang / edukasi)
+          "message": message,
+          "mode": mode, // Kirim parameter mode
         }),
       );
 
-      debugPrint("CHAT ${res.statusCode}: ${res.body}");
-
-      // Ambil jawaban AI
-      if (res.statusCode == 200) {
-        return jsonDecode(res.body)['response'];
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        return jsonResponse['response'];
+      } else {
+        return "Maaf, server lagi sibuk (Error ${response.statusCode})";
       }
-      return null;
     } catch (e) {
-      debugPrint("CHAT ERROR: $e");
-      return null;
+      print("Error Chatbot: $e");
+      return "Gagal terhubung ke server.";
     }
   }
 
-
-  // ================= VIDEO WAYANG =================
-  // Mengambil daftar video wayang dari backend
+  // === FITUR VIDEO WAYANG ===
   static Future<List<dynamic>> getVideos() async {
     try {
-      // Request GET ke endpoint video
-      final res = await http.get(Uri.parse("$baseUrl/api/videos"));
+      final response = await http.get(Uri.parse("$baseUrl/videos"));
 
-      // Jika sukses
-      if (res.statusCode == 200) {
-        final jsonRes = jsonDecode(res.body);
-
-        // Ambil array video dari key "data"
-        return jsonRes['data'] ?? [];
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        if (jsonResponse['status'] == 'success') {
+          return jsonResponse['data']; // Mengembalikan List Video
+        }
       }
-      return [];
+      return []; // Return list kosong jika gagal
     } catch (e) {
-      debugPrint("VIDEO ERROR: $e");
+      print("Error getVideos: $e");
       return [];
     }
   }
 
-
-  // ================= ARTIKEL =================
-  // Mengambil daftar artikel dari backend
+  // === FITUR ARTIKEL ===
   static Future<List<dynamic>> getArticles() async {
     try {
-      final res = await http.get(Uri.parse("$baseUrl/api/articles"));
+      final response = await http.get(Uri.parse("$baseUrl/articles"));
 
-      if (res.statusCode == 200) {
-        final jsonRes = jsonDecode(res.body);
-        return jsonRes['data'] ?? [];
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        if (jsonResponse['status'] == 'success') {
+          return jsonResponse['data'];
+        }
       }
       return [];
     } catch (e) {
-      debugPrint("ARTICLE ERROR: $e");
+      print("Error getArticles: $e");
       return [];
     }
   }
 
+  // ================= LOGOUT =================
+  static Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+  }
 
   // ================= ulasan =================
   static Future<bool> postUlasan({
