@@ -1,0 +1,3 @@
+- [x] Fix context.mounted checks in detail_profile_page.dart for SnackBar in _loadProfile and _saveProfile
+- [x] Fix context.mounted checks in edit_profile_page.dart for SnackBar in _loadProfile and _saveProfile
+- [x] Make _loadProfile and _saveProfile return Future<void> for consistency in both files
