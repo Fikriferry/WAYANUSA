@@ -5,6 +5,11 @@ import 'package:wayanusa/pages/help_support_page.dart';
 import 'package:wayanusa/pages/about_app_page.dart';
 import '../services/api_service.dart';
 
+// ================= PROFILE PAGE =================
+// StatefulWidget karena:
+// - mengambil data dari API
+// - menyimpan state loading
+// - menggunakan animasi
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
 
@@ -12,123 +17,209 @@ class ProfilePage extends StatefulWidget {
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
+
+// ================= STATE PROFILE PAGE =================
 class _ProfilePageState extends State<ProfilePage>
     with SingleTickerProviderStateMixin {
-  bool isLoading = true;
-  String namaUser = "Memuat...";
-  String emailUser = "wayanusa@user.com"; // Placeholder email
 
-  // Animasi
+  // Status loading saat data profile diambil dari API
+  bool isLoading = true;
+
+  // Nama user (default saat loading)
+  String namaUser = "Memuat...";
+
+  // Email user (placeholder sebelum API selesai)
+  String emailUser = "wayanusa@user.com";
+
+  // ================= ANIMASI =================
+
+  // Controller utama animasi
   late AnimationController _animController;
+
+  // Animasi geser dari bawah ke atas
   late Animation<Offset> _slideAnim;
 
+
+  // ================= INIT STATE =================
   @override
   void initState() {
     super.initState();
+
+    // Inisialisasi animation controller
     _animController = AnimationController(
-      vsync: this,
+      vsync: this, // sinkron dengan lifecycle widget
       duration: const Duration(milliseconds: 800),
     );
-    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero)
-        .animate(
-          CurvedAnimation(parent: _animController, curve: Curves.easeOutQuart),
-        );
 
+    // Animasi slide lembut (easeOutQuart)
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.1), // posisi awal agak ke bawah
+      end: Offset.zero,            // posisi akhir normal
+    ).animate(
+      CurvedAnimation(
+        parent: _animController,
+        curve: Curves.easeOutQuart,
+      ),
+    );
+
+    // Ambil data profile dari backend
     loadProfile();
   }
 
+
+  // ================= DISPOSE =================
   @override
   void dispose() {
+    // Hentikan animasi saat halaman ditutup
     _animController.dispose();
     super.dispose();
   }
 
+
+  // ================= LOAD PROFILE =================
+  // Mengambil data profile user dari API
   Future<void> loadProfile() async {
     try {
+      // Panggil API profile
       final data = await ApiService.getProfile();
+
+      // Cegah setState jika widget sudah dihapus
       if (!mounted) return;
 
+      // Jika data berhasil didapat
       if (data != null) {
         setState(() {
+          // Ambil nama user dari response API
           namaUser = data['name'] ?? "User Wayanusa";
+
+          // Ambil email user dari response API
           emailUser = data['email'] ?? "email@wayanusa.com";
+
+          // Matikan loading
           isLoading = false;
         });
-        _animController.forward(); // Jalankan animasi setelah data siap
+
+        // Jalankan animasi setelah data siap
+        _animController.forward();
       }
     } catch (e) {
+      // Jika error (token invalid / koneksi gagal)
       if (mounted) {
         setState(() {
           namaUser = "User";
           isLoading = false;
         });
+
+        // Tetap jalankan animasi
         _animController.forward();
       }
     }
   }
 
-  // LOGOUT CONFIRMATION DIALOG
+
+  // ================= LOGOUT CONFIRMATION =================
+  // Dialog konfirmasi sebelum logout
   void _confirmLogout() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+
+        // Bentuk dialog membulat
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+
+        // Judul dialog
         title: const Text(
           "Keluar Akun?",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+
+        // Isi dialog
         content: const Text(
           "Apakah Anda yakin ingin keluar dari aplikasi Wayanusa?",
         ),
+
+        // Tombol dialog
         actions: [
+
+          // Tombol batal
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text("Batal", style: TextStyle(color: Colors.grey)),
+            child: const Text(
+              "Batal",
+              style: TextStyle(color: Colors.grey),
+            ),
           ),
+
+          // Tombol logout
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx); // Tutup dialog
+
+              // Hapus token login
               await ApiService.logout();
+
               if (!mounted) return;
+
+              // Kembali ke halaman login
+              // dan hapus semua halaman sebelumnya
               Navigator.pushNamedAndRemoveUntil(
                 context,
                 '/login',
                 (route) => false,
               );
             },
+
+            // Style tombol logout
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.redAccent,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            child: const Text("Keluar", style: TextStyle(color: Colors.white)),
+
+            child: const Text(
+              "Keluar",
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
     );
   }
 
+
+  // ================= BUILD UI =================
   @override
   Widget build(BuildContext context) {
-    // Palet Warna
+
+    // Palet warna utama aplikasi
     const primaryColor = Color(0xFFD4A373);
     const secondaryColor = Color(0xFF4B3425);
     const bgColor = Color(0xFFF9F9F9);
 
     return Scaffold(
       backgroundColor: bgColor,
+
+      // Jika masih loading → tampilkan spinner
       body: isLoading
-          ? const Center(child: CircularProgressIndicator(color: primaryColor))
+          ? const Center(
+              child: CircularProgressIndicator(color: primaryColor),
+            )
+
+          // Jika data sudah siap
           : SingleChildScrollView(
               child: Column(
                 children: [
-                  // 1. HEADER SECTION (Gradient & Curve)
+
+                  // ================= HEADER =================
                   Stack(
                     alignment: Alignment.center,
                     clipBehavior: Clip.none,
                     children: [
-                      // Background Header
+
+                      // Background gradient header
                       Container(
                         height: 240,
                         width: double.infinity,
@@ -143,6 +234,8 @@ class _ProfilePageState extends State<ProfilePage>
                             bottomRight: Radius.circular(40),
                           ),
                         ),
+
+                        // Tombol back
                         child: SafeArea(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
@@ -163,11 +256,13 @@ class _ProfilePageState extends State<ProfilePage>
                         ),
                       ),
 
-                      // Profile Info & Avatar
+                      // ================= AVATAR & INFO =================
                       Positioned(
-                        bottom: -50, // Membuat avatar "keluar" dari header
+                        bottom: -50, // avatar keluar dari header
                         child: Column(
                           children: [
+
+                            // Border putih avatar
                             Container(
                               padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
@@ -181,15 +276,20 @@ class _ProfilePageState extends State<ProfilePage>
                                   ),
                                 ],
                               ),
+
+                              // Avatar user
                               child: const CircleAvatar(
                                 radius: 55,
                                 backgroundColor: Color(0xFFFFF3E0),
                                 backgroundImage: NetworkImage(
                                   "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-                                ), // Placeholder Image
+                                ),
                               ),
                             ),
+
                             const SizedBox(height: 10),
+
+                            // Nama user
                             Text(
                               namaUser,
                               style: const TextStyle(
@@ -198,6 +298,8 @@ class _ProfilePageState extends State<ProfilePage>
                                 color: Color(0xFF4B3425),
                               ),
                             ),
+
+                            // Email user
                             Text(
                               emailUser,
                               style: TextStyle(
@@ -211,19 +313,21 @@ class _ProfilePageState extends State<ProfilePage>
                     ],
                   ),
 
-                  const SizedBox(
-                    height: 70,
-                  ), // Memberi ruang untuk avatar yg pop-out
-                  // 2. MENU OPTIONS
+                  const SizedBox(height: 70), // ruang avatar
+
+                  // ================= MENU =================
                   FadeTransition(
                     opacity: _animController,
                     child: SlideTransition(
                       position: _slideAnim,
+
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+
+                            // ===== AKUN =====
                             _buildSectionTitle("Akun Saya"),
                             _buildMenuCard([
                               _buildMenuItem(
@@ -235,7 +339,8 @@ class _ProfilePageState extends State<ProfilePage>
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => const DetailProfilePage(),
+                                      builder: (_) =>
+                                          const DetailProfilePage(),
                                     ),
                                   );
                                 },
@@ -247,7 +352,6 @@ class _ProfilePageState extends State<ProfilePage>
                                 subtitle: "Atur pesan masuk",
                                 color: Colors.orangeAccent,
                                 onTap: () {
-                                  // Navigasi ke Halaman Pengaturan Notifikasi
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -255,12 +359,13 @@ class _ProfilePageState extends State<ProfilePage>
                                           const NotificationSettingsPage(),
                                     ),
                                   );
-                                }, // Fitur mendatang
+                                },
                               ),
                             ]),
 
                             const SizedBox(height: 25),
 
+                            // ===== UMUM =====
                             _buildSectionTitle("Umum"),
                             _buildMenuCard([
                               _buildMenuItem(
@@ -269,11 +374,11 @@ class _ProfilePageState extends State<ProfilePage>
                                 subtitle: "Hubungi admin Wayanusa",
                                 color: Colors.purpleAccent,
                                 onTap: () {
-                                  // Navigasi
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => const HelpSupportPage(),
+                                      builder: (_) =>
+                                          const HelpSupportPage(),
                                     ),
                                   );
                                 },
@@ -285,7 +390,6 @@ class _ProfilePageState extends State<ProfilePage>
                                 subtitle: "Versi 1.0.0 (Beta)",
                                 color: Colors.teal,
                                 onTap: () {
-                                  // Navigasi ke Halaman Tentang
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -298,7 +402,7 @@ class _ProfilePageState extends State<ProfilePage>
 
                             const SizedBox(height: 25),
 
-                            // LOGOUT BUTTON
+                            // ================= LOGOUT =================
                             SizedBox(
                               width: double.infinity,
                               child: TextButton.icon(
@@ -318,13 +422,15 @@ class _ProfilePageState extends State<ProfilePage>
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 15,
                                   ),
-                                  backgroundColor: Colors.red.withOpacity(0.05),
+                                  backgroundColor:
+                                      Colors.red.withOpacity(0.05),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(15),
                                   ),
                                 ),
                               ),
                             ),
+
                             const SizedBox(height: 40),
                           ],
                         ),
@@ -337,7 +443,10 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  // WIDGET HELPERS
+
+  // ================= HELPER WIDGET =================
+
+  // Judul section (Akun Saya, Umum)
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 10, bottom: 10),
@@ -352,6 +461,7 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
+  // Card pembungkus menu
   Widget _buildMenuCard(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
@@ -369,6 +479,7 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
+  // Garis pemisah antar menu
   Widget _buildDivider() {
     return Divider(
       height: 1,
@@ -378,6 +489,7 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
+  // Item menu reusable
   Widget _buildMenuItem({
     required IconData icon,
     required String title,
@@ -387,7 +499,10 @@ class _ProfilePageState extends State<ProfilePage>
   }) {
     return ListTile(
       onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+
+      // Icon bulat di kiri
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
@@ -396,14 +511,23 @@ class _ProfilePageState extends State<ProfilePage>
         ),
         child: Icon(icon, color: color, size: 22),
       ),
+
+      // Judul menu
       title: Text(
         title,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+        style: const TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 15,
+        ),
       ),
+
+      // Subjudul menu
       subtitle: Text(
         subtitle,
         style: TextStyle(fontSize: 12, color: Colors.grey[500]),
       ),
+
+      // Icon panah kanan
       trailing: const Icon(
         Icons.chevron_right_rounded,
         color: Colors.grey,
