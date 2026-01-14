@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 
 class HelpSupportPage extends StatefulWidget {
   const HelpSupportPage({super.key});
@@ -8,31 +9,36 @@ class HelpSupportPage extends StatefulWidget {
 }
 
 class _HelpSupportPageState extends State<HelpSupportPage> {
-  // Palet Warna
+  // ================= WARNA =================
   final Color primaryColor = const Color(0xFFD4A373);
   final Color secondaryColor = const Color(0xFF4B3425);
   final Color bgColor = const Color(0xFFF9F9F9);
 
-  // Controller untuk Form Masukan
+  // ================= STATE =================
   final TextEditingController _feedbackController = TextEditingController();
+  int _rating = 0;
 
-  // Data Dummy FAQ
+  // ================= FAQ =================
   final List<Map<String, String>> _faqs = [
     {
       "question": "Bagaimana cara memindai Wayang?",
-      "answer": "Buka menu 'Kamera' di halaman utama atau tekan tombol 'Analisis Wayang'. Arahkan kamera ke wayang golek secara tegak lurus dan pastikan pencahayaan cukup."
+      "answer":
+          "Buka menu Kamera di halaman utama atau tekan tombol Analisis Wayang."
     },
     {
       "question": "Apakah aplikasi ini berbayar?",
-      "answer": "Aplikasi Wayanusa dapat diunduh dan digunakan secara gratis. Namun, beberapa fitur premium mungkin akan hadir di masa mendatang."
+      "answer":
+          "Aplikasi Wayanusa gratis digunakan. Fitur premium akan hadir."
     },
     {
       "question": "Bagaimana cara menghubungi Cepot?",
-      "answer": "Cepot adalah asisten AI kami. Anda dapat mengaksesnya melalui menu Chatbot di halaman utama atau tombol melayang di pojok kanan bawah."
+      "answer":
+          "Cepot adalah asisten AI kami. Bisa diakses dari menu Chatbot."
     },
     {
-      "question": "Aplikasi sering menutup sendiri (Force Close)?",
-      "answer": "Pastikan koneksi internet stabil dan Anda menggunakan versi terbaru. Jika masalah berlanjut, silakan hubungi tim teknis kami melalui Email."
+      "question": "Aplikasi sering force close?",
+      "answer":
+          "Pastikan koneksi internet stabil dan aplikasi versi terbaru."
     },
   ];
 
@@ -42,42 +48,56 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
     super.dispose();
   }
 
-  // Fungsi Kirim Masukan (Simulasi)
-  void _sendFeedback() {
-    if (_feedbackController.text.trim().isEmpty) return;
+  // ================= KIRIM ULASAN =================
+  Future<void> _sendFeedback() async {
+    if (_feedbackController.text.trim().isEmpty || _rating == 0) return;
 
-    // Tutup keyboard
-    FocusScope.of(context).unfocus();
-    _feedbackController.clear();
+    final success = await ApiService.postUlasan(
+      rating: _rating,
+      komentar: _feedbackController.text,
+    );
+
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 10),
-            Text("Terima kasih atas masukan Anda!"),
-          ],
+        content: Text(
+          success
+              ? "Ulasan berhasil dikirim 🙏"
+              : "Gagal mengirim ulasan 😢",
         ),
-        backgroundColor: Colors.green[600],
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        backgroundColor: success ? Colors.green : Colors.red,
       ),
+    );
+
+    if (success) {
+      _feedbackController.clear();
+      setState(() => _rating = 0);
+    }
+  }
+
+  // ================= STAR RATING =================
+  Widget _buildStarRating() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(5, (index) {
+        return IconButton(
+          icon: Icon(
+            Icons.star,
+            size: 32,
+            color: index < _rating ? Colors.amber : Colors.grey[300],
+          ),
+          onPressed: () {
+            setState(() {
+              _rating = index + 1;
+            });
+          },
+        );
+      }),
     );
   }
 
-  // Fungsi Hubungi (Simulasi URL Launcher)
-  void _contactSupport(String platform) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Membuka $platform..."),
-        duration: const Duration(milliseconds: 800),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-    // Di sini nanti bisa pasang logic url_launcher (buka WA/Email app)
-  }
-
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -85,7 +105,10 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
       appBar: AppBar(
         title: const Text(
           "Pusat Bantuan",
-          style: TextStyle(color: Color(0xFF4B3425), fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Color(0xFF4B3425),
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
         backgroundColor: bgColor,
@@ -100,7 +123,6 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. HEADER TEXT
             const Text(
               "Halo, ada yang bisa kami bantu?",
               style: TextStyle(
@@ -111,43 +133,17 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              "Pilih layanan bantuan di bawah ini atau baca pertanyaan umum.",
-              style: TextStyle(color: Colors.grey[600], fontSize: 14),
-            ),
-
-            const SizedBox(height: 24),
-
-            // 2. CONTACT CHANNELS (GRID)
-            Row(
-              children: [
-                Expanded(
-                  child: _buildContactCard(
-                    icon: Icons.chat_bubble_outline,
-                    label: "WhatsApp",
-                    color: Colors.green,
-                    onTap: () => _contactSupport("WhatsApp Admin"),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildContactCard(
-                    icon: Icons.email_outlined,
-                    label: "Email",
-                    color: Colors.orange,
-                    onTap: () => _contactSupport("Aplikasi Email"),
-                  ),
-                ),
-              ],
+              "Pilih layanan bantuan atau kirim ulasan.",
+              style: TextStyle(color: Colors.grey[600]),
             ),
 
             const SizedBox(height: 30),
 
-            // 3. FAQ SECTION
-            _buildSectionHeader("Pertanyaan Umum (FAQ)"),
+            // ================= FAQ =================
+            _buildSectionHeader("Pertanyaan Umum"),
             const SizedBox(height: 10),
-            
             ListView.builder(
-              shrinkWrap: true, // Agar bisa masuk dalam SingleChildScrollView
+              shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _faqs.length,
               itemBuilder: (context, index) {
@@ -157,8 +153,8 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
 
             const SizedBox(height: 30),
 
-            // 4. FEEDBACK FORM
-            _buildSectionHeader("Kirim Masukan"),
+            // ================= ULASAN =================
+            _buildSectionHeader("Kirim Ulasan"),
             const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.all(20),
@@ -175,12 +171,13 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
               ),
               child: Column(
                 children: [
+                  _buildStarRating(),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: _feedbackController,
                     maxLines: 4,
                     decoration: InputDecoration(
-                      hintText: "Tulis kritik, saran, atau kendala Anda di sini...",
-                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
+                      hintText: "Tulis ulasan kamu...",
                       filled: true,
                       fillColor: bgColor,
                       border: OutlineInputBorder(
@@ -195,17 +192,15 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                     width: double.infinity,
                     height: 45,
                     child: ElevatedButton(
-                      onPressed: _sendFeedback,
+                      onPressed: _rating == 0 ? null : _sendFeedback,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        elevation: 0,
                       ),
                       child: const Text(
-                        "Kirim Pesan",
+                        "Kirim Ulasan",
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -213,16 +208,13 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                 ],
               ),
             ),
-            
-            const SizedBox(height: 40),
           ],
         ),
       ),
     );
   }
 
-  // --- WIDGET HELPERS ---
-
+  // ================= HELPER =================
   Widget _buildSectionHeader(String title) {
     return Text(
       title.toUpperCase(),
@@ -235,59 +227,6 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
     );
   }
 
-  // Kartu Kontak (WA/Email)
-  Widget _buildContactCard({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              label,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              "Respon Cepat",
-              style: TextStyle(color: Colors.grey[500], fontSize: 10),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Item FAQ (Accordion)
   Widget _buildFaqTile(Map<String, String> item) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -296,31 +235,21 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey[200]!),
       ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          title: Text(
-            item['question']!,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF4B3425),
-            ),
+      child: ExpansionTile(
+        title: Text(
+          item['question']!,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF4B3425),
           ),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          expandedCrossAxisAlignment: CrossAxisAlignment.start,
-          iconColor: primaryColor,
-          children: [
-            Text(
-              item['answer']!,
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey[600],
-                height: 1.5,
-              ),
-            ),
-          ],
         ),
+        childrenPadding: const EdgeInsets.all(16),
+        children: [
+          Text(
+            item['answer']!,
+            style: TextStyle(color: Colors.grey[600]),
+          ),
+        ],
       ),
     );
   }

@@ -10,12 +10,11 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage>
-    with SingleTickerProviderStateMixin {
+class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-
   bool isLoading = false;
+
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
@@ -23,22 +22,15 @@ class _LoginPageState extends State<LoginPage>
   @override
   void initState() {
     super.initState();
+
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
 
-    _fadeAnim = CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeIn,
-    );
-
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.2),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeOut),
-    );
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeIn);
+    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
 
     _animController.forward();
   }
@@ -56,17 +48,14 @@ class _LoginPageState extends State<LoginPage>
     final password = passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Email dan Password tidak boleh kosong!"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnack("Email dan Password tidak boleh kosong!", Colors.red);
       return;
     }
 
     setState(() => isLoading = true);
+
     final success = await ApiService.login(email, password);
+
     setState(() => isLoading = false);
 
     if (success) {
@@ -75,13 +64,22 @@ class _LoginPageState extends State<LoginPage>
         MaterialPageRoute(builder: (_) => const HomeWayangPage()),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Email atau password salah"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnack("Email atau password salah", Colors.red);
     }
+  }
+
+  void _loginGoogle() {
+    // TODO: Implementasi login Google
+    _showSnack("Login dengan Google belum diimplementasikan", Colors.blue);
+  }
+
+  void _showSnack(String msg, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: color,
+      ),
+    );
   }
 
   @override
@@ -90,10 +88,7 @@ class _LoginPageState extends State<LoginPage>
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xFFB6783D),
-              Color(0xFFD4A373),
-            ],
+            colors: [Color(0xFFB6783D), Color(0xFFD4A373)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -117,23 +112,16 @@ class _LoginPageState extends State<LoginPage>
                       children: [
                         Image.asset('assets/logo.png', width: 100),
                         const SizedBox(height: 16),
-
                         const Text(
                           "Selamat Datang",
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 6),
                         const Text(
                           "Silakan login untuk melanjutkan",
                           style: TextStyle(color: Colors.grey),
                         ),
-
                         const SizedBox(height: 20),
-
-                        // EMAIL
                         TextField(
                           controller: emailController,
                           decoration: InputDecoration(
@@ -145,8 +133,6 @@ class _LoginPageState extends State<LoginPage>
                           ),
                         ),
                         const SizedBox(height: 14),
-
-                        // PASSWORD
                         TextField(
                           controller: passwordController,
                           obscureText: true,
@@ -159,9 +145,7 @@ class _LoginPageState extends State<LoginPage>
                           ),
                           onSubmitted: (_) => _login(),
                         ),
-
                         const SizedBox(height: 24),
-
                         ElevatedButton(
                           onPressed: isLoading ? null : _login,
                           style: ElevatedButton.styleFrom(
@@ -169,25 +153,45 @@ class _LoginPageState extends State<LoginPage>
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
                             ),
-                            minimumSize:
-                                const Size(double.infinity, 50),
+                            minimumSize: const Size(double.infinity, 50),
                           ),
                           child: isLoading
-                              ? const CircularProgressIndicator(
-                                  color: Colors.white,
-                                )
+                              ? const CircularProgressIndicator(color: Colors.white)
                               : const Text(
                                   "Masuk",
                                   style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white),
                                 ),
                         ),
-
                         const SizedBox(height: 16),
-
+                        // --- Tombol Login Google ---
+                        ElevatedButton(
+                          onPressed: _loginGoogle,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4285F4),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            minimumSize: const Size(double.infinity, 50),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.g_mobiledata, color: Colors.white),
+                              SizedBox(width: 12),
+                              Text(
+                                "Masuk dengan Google",
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -196,9 +200,7 @@ class _LoginPageState extends State<LoginPage>
                               onTap: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const RegisterPage(),
-                                  ),
+                                  MaterialPageRoute(builder: (_) => const RegisterPage()),
                                 );
                               },
                               child: const Text(

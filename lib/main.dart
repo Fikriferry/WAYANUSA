@@ -58,7 +58,7 @@ class WayanusaApp extends StatelessWidget {
 
         '/cari_dalang': (context) => const CariDalangPage(),
 
-        '/edit_profile': (context) => const EditProfilePage(),
+        // '/edit_profile': (context) => const EditProfilePage(),
 
         '/profile': (context) => const ProfilePage(),
 
