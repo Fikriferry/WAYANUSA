@@ -4,11 +4,11 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
-import '../config.dart';
+// import '../config.dart';
 
 class ApiService {
   // ================= BASE URL =================
-  static const String baseUrl = "http://192.168.48.150:8000/api";
+  static const String baseUrl = "https://monoclinic-superboldly-tobi.ngrok-free.dev/api";
 
   // ================= GET TOKEN =================
   static Future<String?> getToken() async {
