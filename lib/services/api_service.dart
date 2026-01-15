@@ -8,7 +8,8 @@ import 'package:image_picker/image_picker.dart';
 
 class ApiService {
   // ================= BASE URL =================
-  static const String baseUrl = "https://monoclinic-superboldly-tobi.ngrok-free.dev/api";
+  static const String baseUrl =
+      "https://monoclinic-superboldly-tobi.ngrok-free.dev/api";
 
   // ================= GET TOKEN =================
   static Future<String?> getToken() async {
@@ -62,19 +63,63 @@ class ApiService {
       if (token == null) return null;
 
       final res = await http.get(
-        Uri.parse('$baseUrl/auth/profile'),
-        headers: {"Authorization": "Bearer $token"},
+        Uri.parse('$baseUrl/auth/profile'), // samakan endpoint
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json", // tambahkan
+        },
       );
 
       if (res.statusCode == 200) {
-        return jsonDecode(res.body);
+        final data = jsonDecode(res.body);
+        if (data is Map<String, dynamic>) {
+          return data;
+        } else {
+          debugPrint("Profile data tidak valid: $data");
+          return null;
+        }
+      } else {
+        debugPrint("Profile error: ${res.body}");
+        return null;
       }
-
-      debugPrint("Profile error: ${res.body}");
-      return null;
     } catch (e) {
       debugPrint("Profile exception: $e");
       return null;
+    }
+  }
+
+  // ================= UPDATE PROFILE =================
+  static Future<bool> updateProfile({
+    required String name,
+    required String email,
+    String? password,
+  }) async {
+    final token = await getToken();
+    if (token == null) return false;
+
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl/auth/profile'), // endpoint sama
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode({
+          "name": name,
+          "email": email,
+          if (password != null && password.isNotEmpty) "password": password,
+        }),
+      );
+
+      if (res.statusCode == 200) {
+        return true;
+      } else {
+        debugPrint("Update profile error: ${res.body}");
+        return false;
+      }
+    } catch (e) {
+      debugPrint("Update profile exception: $e");
+      return false;
     }
   }
 
@@ -175,6 +220,32 @@ class ApiService {
       return [];
     }
   }
+
+  // ================= ulasan =================
+  static Future<bool> postUlasan({
+    required int rating,
+    required String komentar,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse("$baseUrl/ulasan"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "rating": rating,
+          "komentar": komentar,
+        }),
+      );
+
+      print("ULASAN STATUS: ${res.statusCode}");
+      print(res.body);
+
+      return res.statusCode == 201;
+    } catch (e) {
+      print("ULASAN ERROR: $e");
+      return false;
+    }
+  }
+
 
   // ================= LOGOUT =================
   static Future<void> logout() async {
