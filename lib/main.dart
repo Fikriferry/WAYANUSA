@@ -6,7 +6,7 @@ import 'pages/chatbotpage.dart';
 import 'pages/videopage.dart';
 import 'pages/quiz_page.dart';
 import 'pages/cari_dalang_page.dart';
-import 'pages/edit_profile_page.dart';
+// import 'pages/edit_profile_page.dart';
 import 'pages/profile_page.dart';
 import 'pages/citra_wayang.dart';
 import 'pages/sejarah_wayang_page.dart';
