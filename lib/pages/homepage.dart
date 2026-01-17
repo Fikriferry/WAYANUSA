@@ -140,18 +140,20 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
                             padding: EdgeInsets.all(20),
                             child: Text("Belum ada artikel terbaru.", style: TextStyle(color: Colors.grey)),
                           )
-                        : CarouselSlider(
-                            options: CarouselOptions(
-                              height: 120.0,
-                              autoPlay: false,
-                              enlargeCenterPage: true,
-                              viewportFraction: 0.9,
-                              aspectRatio: 16 / 9,
-                              autoPlayCurve: Curves.fastOutSlowIn,
+                        : SizedBox(
+                            height: 120.0,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              itemCount: articles.length,
+                              itemBuilder: (context, index) {
+                                return Container(
+                                  width: MediaQuery.of(context).size.width * 0.8,
+                                  margin: const EdgeInsets.only(right: 15),
+                                  child: _buildArticleCard(context, articles[index]),
+                                );
+                              },
                             ),
-                            items: articles.map((article) {
-                              return _buildArticleCard(context, article);
-                            }).toList(),
                           ),
                 ],
               ),
