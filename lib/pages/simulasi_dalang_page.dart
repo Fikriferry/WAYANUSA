@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../models/wayang_game.dart';
+import '../services/api_service.dart';
+import '../services/image_helper.dart';
 
 class SimulasiDalangPage extends StatefulWidget {
   const SimulasiDalangPage({super.key});
@@ -9,28 +12,24 @@ class SimulasiDalangPage extends StatefulWidget {
 }
 
 class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
+  double _startDy = 0;
+  double _startAngle = 0;
   final List<Map<String, dynamic>> activeWayang = [];
-  final double deleteZoneSize = 50.0;
+  final double deleteZoneSize = 50;
 
-  final List<Map<String, String>> wayangList = [
-    {"name": "Arjuna", "image": "assets/wayang_arjuna.png"},
-    {"name": "Bima", "image": "assets/wayang_bima.png"},
-    {"name": "Semar", "image": "assets/wayang_semar.png"},
-    {"name": "Srikandi", "image": "assets/wayang_srikandi.png"},
-  ];
-
+  List<WayangGame> wayangList = [];
+  bool isLoading = true;
   bool isOverDeleteZone = false;
 
-  // Force landscape di mobile
   @override
   void initState() {
     super.initState();
-    Future.delayed(Duration.zero, () {
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
-    });
+    _loadWayang();
+
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
   }
 
   @override
@@ -42,55 +41,59 @@ class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
     super.dispose();
   }
 
+  Future<void> _loadWayang() async {
+    try {
+      final data = await ApiService.getWayangGame();
+      setState(() {
+        wayangList = data;
+        isLoading = false;
+      });
+    } catch (_) {
+      setState(() => isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape || screenWidth > screenHeight;
+    final screen = MediaQuery.of(context).size;
+    final isLandscape = screen.width > screen.height;
 
     return Scaffold(
       backgroundColor: const Color(0xffFEFBF5),
       appBar: AppBar(
         title: const Text(
           "Simulasi Dalang",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Color(0xff4B3425),
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xffF3E7D3),
-        iconTheme: const IconThemeData(color: Color(0xff4B3425)),
       ),
       body: Stack(
         children: [
-          // BACKGROUND
+          /// BACKGROUND
           Positioned.fill(
             child: Image.asset(
               "assets/background_panggung.png",
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(color: const Color(0xffE8D4BE)),
+              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
             ),
           ),
 
-          // WAYANG AKTIF
-          ...activeWayang.map((wayang) {
-            int index = activeWayang.indexOf(wayang);
+          /// WAYANG AKTIF
+          ...activeWayang.map((w) {
+            final index = activeWayang.indexOf(w);
             return Positioned(
-              left: wayang['position'].dx,
-              top: wayang['position'].dy,
+              left: w['position'].dx,
+              top: w['position'].dy,
               child: GestureDetector(
-                onPanUpdate: (details) {
+                behavior: HitTestBehavior.deferToChild, // 🔥 INI KUNCI
+                onPanUpdate: (d) {
                   setState(() {
-                    wayang['position'] += details.delta;
+                    w['position'] += d.delta;
 
-                    final double centerY = wayang['position'].dy + 120;
-                    if (wayang['position'].dx < deleteZoneSize &&
-                        centerY > screenHeight - deleteZoneSize - 20) {
-                      isOverDeleteZone = true;
-                    } else {
-                      isOverDeleteZone = false;
-                    }
+                    final centerY = w['position'].dy + 120;
+                    isOverDeleteZone =
+                        w['position'].dx < deleteZoneSize &&
+                        centerY > screen.height - deleteZoneSize;
                   });
                 },
                 onPanEnd: (_) {
@@ -101,21 +104,12 @@ class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
                     });
                   }
                 },
-                child: AnimatedOpacity(
-                  opacity: isOverDeleteZone ? 0.6 : 1.0,
-                  duration: const Duration(milliseconds: 200),
-                  child: Image.asset(
-                    wayang['image'],
-                    height: 180,
-                    errorBuilder: (_, __, ___) =>
-                        const Icon(Icons.image_not_supported, size: 120, color: Colors.grey),
-                  ),
-                ),
+                child: _WayangStack(w),
               ),
             );
-          }).toList(),
+          }),
 
-          // CONTROL BOTTOM
+          /// BOTTOM CONTROL
           Positioned(
             left: 20,
             right: 20,
@@ -123,59 +117,31 @@ class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  height: deleteZoneSize,
-                  width: deleteZoneSize,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isOverDeleteZone
-                        ? Colors.red.withOpacity(0.8)
-                        : Colors.red.withOpacity(0.4),
-                    boxShadow: [
-                      if (isOverDeleteZone)
-                        BoxShadow(
-                          color: Colors.red.withOpacity(0.5),
-                          blurRadius: 12,
-                          spreadRadius: 4,
-                        ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.delete_outline_rounded,
-                      color: Colors.white,
-                      size: isOverDeleteZone ? 46 : 38,
-                    ),
-                  ),
+                CircleAvatar(
+                  radius: deleteZoneSize / 2,
+                  backgroundColor: isOverDeleteZone
+                      ? Colors.red
+                      : Colors.red.withOpacity(.4),
+                  child: const Icon(Icons.delete, color: Colors.white),
                 ),
                 ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xffE8D4BE),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  ),
                   onPressed: () => _showWayangPicker(context),
-                  icon: const Icon(Icons.theater_comedy, color: Color(0xff4B3425)),
-                  label: const Text(
-                    "Tambah Wayang",
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xff4B3425)),
-                  ),
+                  icon: const Icon(Icons.theater_comedy),
+                  label: const Text("Tambah Wayang"),
                 ),
               ],
             ),
           ),
 
-          // OVERLAY CEK LANDSCAPE (khusus web)
+          /// OVERLAY JIKA PORTRAIT
           if (!isLandscape)
             Positioned.fill(
               child: Container(
-                color: Colors.black.withOpacity(0.7),
+                color: Colors.black54,
                 child: const Center(
                   child: Text(
-                    "⚠️ Silakan rotate device ke landscape",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                    "Rotate ke landscape",
+                    style: TextStyle(color: Colors.white, fontSize: 24),
                   ),
                 ),
               ),
@@ -185,78 +151,289 @@ class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
     );
   }
 
+  /// ===== WIDGET WAYANG =====
+  Widget _WayangStack(Map<String, dynamic> w) {
+    const double badanLeft = 90;
+    const double badanTop = 40;
+
+    return SizedBox(
+      width: 260,
+      height: 320,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          /// ================= BADAN =================
+          if (w['badan'] != null)
+            Positioned(
+              left: badanLeft,
+              top: badanTop,
+              child: Image.network(w['badan'], height: 260),
+            ),
+
+          /// ================= LENGAN KIRI =================
+          if (w['tangan_kiri_atas'] != null)
+            Positioned(
+              left: badanLeft + 20,
+              top: badanTop + 70,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onPanStart: (d) {
+                  _startDy = d.globalPosition.dy;
+                  _startAngle = w['angle_kiri_atas'];
+                },
+                onPanUpdate: (d) {
+                  final diff = d.globalPosition.dy - _startDy;
+                  setState(() {
+                    w['angle_kiri_atas'] = (_startAngle + diff * 0.015).clamp(
+                      -1.2,
+                      0.4,
+                    );
+                  });
+                },
+                child: SizedBox(
+                  // 🔥 HITBOX BESAR
+                  width: 120,
+                  height: 160,
+                  child: Transform(
+                    transform: Matrix4.identity()
+                      ..translate(
+                        25.0,
+                        05.0,
+                      ) // 🔴 PIVOT KIRI ATAS (ATUR SENDIRI)
+                      ..rotateZ(w['angle_kiri_atas'])
+                      ..translate(-25.0, -05.0),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Image.network(w['tangan_kiri_atas'], height: 110),
+                        if (false) // ganti false kalau mau matiin
+                          Positioned(left: 25, top: 05, child: _debugDot()),
+
+                        /// SIKU KIRI
+                        if (w['tangan_kiri_bawah'] != null)
+                          Positioned(
+                            left: -35,
+                            top: 97,
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.translucent,
+                              onPanStart: (d) {
+                                _startDy = d.globalPosition.dy;
+                                _startAngle = w['angle_kiri_bawah'];
+                              },
+                              onPanUpdate: (d) {
+                                final diff = d.globalPosition.dy - _startDy;
+                                setState(() {
+                                  w['angle_kiri_bawah'] =
+                                      (_startAngle + diff * 0.02).clamp(
+                                        -1.6,
+                                        1.6,
+                                      );
+                                });
+                              },
+                              child: SizedBox(
+                                width: 90,
+                                height: 120,
+                                child: Transform(
+                                  transform: Matrix4.identity()
+                                    ..translate(
+                                      52.0,
+                                      5.0,
+                                    ) // 🔴 PIVOT SIKU KIRI
+                                    ..rotateZ(w['angle_kiri_bawah'])
+                                    ..translate(-52.0, -5.0),
+                                  child: Stack(
+                                    children: [
+                                      Image.network(
+                                        w['tangan_kiri_bawah'],
+                                        height: 100,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          /// ================= LENGAN KANAN =================
+          /// ================= LENGAN KANAN =================
+          if (w['tangan_kanan_atas'] != null)
+            Positioned(
+              left: badanLeft + 150,
+              top: badanTop + 45,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onPanStart: (d) {
+                  _startDy = d.globalPosition.dy;
+                  _startAngle = w['angle_kanan_atas'];
+                },
+                onPanUpdate: (d) {
+                  final diff =
+                      _startDy - d.globalPosition.dy; // 🔥 ARAH DIBALIK
+                  setState(() {
+                    w['angle_kanan_atas'] = (_startAngle + diff * 0.015).clamp(
+                      -0.4,
+                      1.2,
+                    );
+                  });
+                },
+                child: SizedBox(
+                  width: 120,
+                  height: 160,
+                  child: Transform(
+                    transform: Matrix4.identity()
+                      ..translate(10.0, 10.0) // 🔴 PIVOT KANAN ATAS
+                      ..rotateZ(w['angle_kanan_atas'])
+                      ..translate(-10.0, -10.0),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Image.network(w['tangan_kanan_atas'], height: 85),
+                        if (false) // ganti false kalau mau matiin
+                          Positioned(right: 10, top: 20, child: _debugDot()),
+
+                        /// SIKU KANAN
+                        if (w['tangan_kanan_bawah'] != null)
+                          Positioned(
+                            right: 30,
+                            top: 65,
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.translucent,
+                              onPanStart: (d) {
+                                _startDy = d.globalPosition.dy;
+                                _startAngle = w['angle_kanan_bawah'];
+                              },
+                              onPanUpdate: (d) {
+                                final diff = _startDy - d.globalPosition.dy;
+                                setState(() {
+                                  w['angle_kanan_bawah'] =
+                                      (_startAngle + diff * 0.02).clamp(
+                                        -1.6,
+                                        1.6,
+                                      );
+                                });
+                              },
+                              child: SizedBox(
+                                width: 100,
+                                height: 110,
+                                child: Transform(
+                                  transform: Matrix4.identity()
+                                    ..translate(
+                                      93.0,
+                                      12.0,
+                                    ) // 🔴 PIVOT SIKU KANAN
+                                    ..rotateZ(w['angle_kanan_bawah'])
+                                    ..translate(-93.0, -12.0),
+                                  child: Stack(
+                                    children: [
+                                      Image.network(
+                                        w['tangan_kanan_bawah'],
+                                        height: 80,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _debugDot() {
+    return Container(
+      width: 6,
+      height: 6,
+      decoration: const BoxDecoration(
+        color: Colors.red,
+        shape: BoxShape.circle,
+      ),
+    );
+  }
+
+  /// ===== BOTTOM SHEET PICKER =====
   void _showWayangPicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xffFEFBF5),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
       builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                "Pilih Wayang untuk Dimainkan",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xff4B3425),
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 130,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: wayangList.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 16),
-                  itemBuilder: (_, index) {
-                    final wayang = wayangList[index];
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          activeWayang.add({
-                            'image': wayang['image'],
-                            'position': const Offset(150, 200),
-                          });
-                        });
-                        Navigator.pop(context);
-                      },
-                      child: Column(
-                        children: [
-                          Container(
-                            height: 90,
-                            width: 90,
-                            decoration: BoxDecoration(
-                              color: const Color(0xffF3E7D3),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0xff4B3425)),
-                            ),
-                            child: Image.asset(
-                              wayang["image"]!,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) =>
-                                  const Icon(Icons.image_not_supported),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            wayang["name"]!,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xff4B3425),
-                            ),
-                          ),
-                        ],
+        if (isLoading) {
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        return SizedBox(
+          height: 180,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: wayangList.length,
+            itemBuilder: (_, i) {
+              final wayang = wayangList[i];
+
+              final thumbnail = wayang.thumbnail != null
+                  ? ImageHelper.resolve(wayang.thumbnail!)
+                  : "https://via.placeholder.com/150";
+
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    activeWayang.add({
+                      'badan': wayang.badan != null
+                          ? ImageHelper.resolve(wayang.badan!)
+                          : null,
+                      'tangan_kanan_atas': wayang.tanganKananAtas != null
+                          ? ImageHelper.resolve(wayang.tanganKananAtas!)
+                          : null,
+                      'tangan_kanan_bawah': wayang.tanganKananBawah != null
+                          ? ImageHelper.resolve(wayang.tanganKananBawah!)
+                          : null,
+                      'tangan_kiri_atas': wayang.tanganKiriAtas != null
+                          ? ImageHelper.resolve(wayang.tanganKiriAtas!)
+                          : null,
+                      'tangan_kiri_bawah': wayang.tanganKiriBawah != null
+                          ? ImageHelper.resolve(wayang.tanganKiriBawah!)
+                          : null,
+                      'position': const Offset(150, 200),
+
+                      // ===== SUDUT =====
+                      'angle_kiri_atas': 0.5,
+                      'angle_kiri_bawah': 0.8,
+                      'angle_kanan_atas': 0.4,
+                      'angle_kanan_bawah': 0.3,
+                    });
+                  });
+                  Navigator.pop(context);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    children: [
+                      Image.network(
+                        thumbnail,
+                        height: 90,
+                        errorBuilder: (_, __, ___) =>
+                            const Icon(Icons.image_not_supported),
                       ),
-                    );
-                  },
+                      const SizedBox(height: 6),
+                      Text(wayang.nama),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              );
+            },
           ),
         );
       },

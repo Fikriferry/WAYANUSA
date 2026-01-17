@@ -4,12 +4,12 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
+import '../models/wayang_game.dart';
 // import '../config.dart';
 
 class ApiService {
   // ================= BASE URL =================
-  static const String baseUrl =
-      "http://192.168.100.222:8000/api";
+  static const String baseUrl = "http://192.168.43.93:8000/api";
 
   // ================= GET TOKEN =================
   static Future<String?> getToken() async {
@@ -221,6 +221,30 @@ class ApiService {
     }
   }
 
+  // === GET SINGLE ARTICLE ===
+  static Future<Map<String, dynamic>?> getArticle(int id) async {
+    try {
+      final response = await http.get(Uri.parse("$baseUrl/articles/$id"));
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        if (jsonResponse['status'] == 'success') {
+          return jsonResponse['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print("Error getArticle: $e");
+      return null;
+    }
+  }
+
+  // ================= LOGOUT =================
+  static Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+  }
+
   // ================= ulasan =================
   static Future<bool> postUlasan({
     required int rating,
@@ -230,10 +254,7 @@ class ApiService {
       final res = await http.post(
         Uri.parse("$baseUrl/ulasan"),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "rating": rating,
-          "komentar": komentar,
-        }),
+        body: jsonEncode({"rating": rating, "komentar": komentar}),
       );
 
       print("ULASAN STATUS: ${res.statusCode}");
@@ -246,10 +267,42 @@ class ApiService {
     }
   }
 
+  static String imageUrl(String path) {
+    final cleaned = path.replaceAll('\\', '/').replaceFirst('static/', '');
 
-  // ================= LOGOUT =================
-  static Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
+    return "$baseUrl/static/$cleaned";
+  }
+
+  // ================= WAYANG GAME =================
+  static Future<List<WayangGame>> getWayangGame() async {
+    try {
+      final res = await http.get(Uri.parse("$baseUrl/wayang-game"));
+
+      if (res.statusCode == 200) {
+        final jsonResponse = jsonDecode(res.body);
+        final List list = jsonResponse['data'];
+
+        return list.map((e) => WayangGame.fromJson(e)).toList();
+      }
+      return [];
+    } catch (e) {
+      print("Error getWayangGame: $e");
+      return [];
+    }
+  }
+
+  static Future<WayangGame?> getWayangGameDetail(int id) async {
+    try {
+      final res = await http.get(Uri.parse("$baseUrl/wayang-game/$id"));
+
+      if (res.statusCode == 200) {
+        final jsonResponse = jsonDecode(res.body);
+        return WayangGame.fromJson(jsonResponse['data']);
+      }
+      return null;
+    } catch (e) {
+      print("Error getWayangGameDetail: $e");
+      return null;
+    }
   }
 }

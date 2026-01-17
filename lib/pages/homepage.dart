@@ -62,8 +62,7 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
     final data = await ApiService.getArticles();
     if (mounted) {
       setState(() {
-        // Kita ambil maksimal 3 artikel saja untuk preview di Home
-        articles = data.take(5).toList();
+        articles = data; // Ambil semua artikel
         isLoadingArticles = false;
       });
     }
@@ -141,14 +140,20 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
                             padding: EdgeInsets.all(20),
                             child: Text("Belum ada artikel terbaru.", style: TextStyle(color: Colors.grey)),
                           )
-                        : ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            itemCount: articles.length,
-                            itemBuilder: (context, index) {
-                              return _buildArticleCard(context, articles[index]);
-                            },
+                        : SizedBox(
+                            height: 120.0,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              itemCount: articles.length,
+                              itemBuilder: (context, index) {
+                                return Container(
+                                  width: MediaQuery.of(context).size.width * 0.8,
+                                  margin: const EdgeInsets.only(right: 15),
+                                  child: _buildArticleCard(context, articles[index]),
+                                );
+                              },
+                            ),
                           ),
                 ],
               ),

@@ -49,7 +49,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> {
   Future<void> _saveProfile() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
+    // final password = _passwordController.text.trim();
 
     if (name.isEmpty || email.isEmpty) {
       if (context.mounted) {
@@ -67,7 +67,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> {
     bool success = await ApiService.updateProfile(
       name: name,
       email: email,
-      password: password.isEmpty ? null : password,
+      // password: password.isEmpty ? null : password,
     );
 
     if (mounted) {
@@ -125,14 +125,14 @@ class _DetailProfilePageState extends State<DetailProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: "Password Baru (Opsional)",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
+                  // TextField(
+                  //   controller: _passwordController,
+                  //   obscureText: true,
+                  //   decoration: const InputDecoration(
+                  //     labelText: "Password Baru (Opsional)",
+                  //     border: OutlineInputBorder(),
+                  //   ),
+                  // ),
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
