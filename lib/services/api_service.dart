@@ -8,7 +8,7 @@ import 'package:image_picker/image_picker.dart';
 
 class ApiService {
   // ================= BASE URL =================
-  static const String baseUrl = "http://192.168.100.132:8000/api";
+  static const String baseUrl = "http://192.168.43.93:8000/api";
 
   // ================= GET TOKEN =================
   static Future<String?> getToken() async {
@@ -215,6 +215,24 @@ class ApiService {
     } catch (e) {
       print("Error getArticles: $e");
       return [];
+    }
+  }
+
+  // === GET SINGLE ARTICLE ===
+  static Future<Map<String, dynamic>?> getArticle(int id) async {
+    try {
+      final response = await http.get(Uri.parse("$baseUrl/articles/$id"));
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        if (jsonResponse['status'] == 'success') {
+          return jsonResponse['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print("Error getArticle: $e");
+      return null;
     }
   }
 

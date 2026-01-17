@@ -62,8 +62,7 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
     final data = await ApiService.getArticles();
     if (mounted) {
       setState(() {
-        // Kita ambil maksimal 3 artikel saja untuk preview di Home
-        articles = data.take(5).toList();
+        articles = data; // Ambil semua artikel
         isLoadingArticles = false;
       });
     }
@@ -141,14 +140,18 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
                             padding: EdgeInsets.all(20),
                             child: Text("Belum ada artikel terbaru.", style: TextStyle(color: Colors.grey)),
                           )
-                        : ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            itemCount: articles.length,
-                            itemBuilder: (context, index) {
-                              return _buildArticleCard(context, articles[index]);
-                            },
+                        : CarouselSlider(
+                            options: CarouselOptions(
+                              height: 120.0,
+                              autoPlay: false,
+                              enlargeCenterPage: true,
+                              viewportFraction: 0.9,
+                              aspectRatio: 16 / 9,
+                              autoPlayCurve: Curves.fastOutSlowIn,
+                            ),
+                            items: articles.map((article) {
+                              return _buildArticleCard(context, article);
+                            }).toList(),
                           ),
                 ],
               ),
