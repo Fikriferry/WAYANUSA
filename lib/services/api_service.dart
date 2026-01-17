@@ -9,7 +9,7 @@ import 'package:image_picker/image_picker.dart';
 class ApiService {
   // ================= BASE URL =================
   static const String baseUrl =
-      "https://monoclinic-superboldly-tobi.ngrok-free.dev/api";
+      "http://192.168.100.222:8000/api";
 
   // ================= GET TOKEN =================
   static Future<String?> getToken() async {

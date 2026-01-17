@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class DalangApi {
   // Pastikan IP dan Port sesuai dengan settingan Flask kamu
-  static const String baseUrl = "https://monoclinic-superboldly-tobi.ngrok-free.dev/api";
+  static const String baseUrl = "http://192.168.100.222:8000/api";
 
   // ================= HELPER PARSING (PENTING) =================
   // Agar aplikasi tidak error jika data dari API null atau beda tipe
