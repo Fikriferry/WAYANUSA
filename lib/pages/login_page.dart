@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'register_page.dart';
 import 'homepage.dart';
 import '../services/api_service.dart';
+import '../services/google_auth.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -10,7 +11,8 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
+class _LoginPageState extends State<LoginPage>
+    with SingleTickerProviderStateMixin {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   bool isLoading = false;
@@ -29,8 +31,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     );
 
     _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeIn);
-    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
 
     _animController.forward();
   }
@@ -68,18 +72,27 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     }
   }
 
-  void _loginGoogle() {
-    // TODO: Implementasi login Google
-    _showSnack("Login dengan Google belum diimplementasikan", Colors.blue);
+  Future<void> _loginGoogle() async {
+    setState(() => isLoading = true);
+
+    final success = await GoogleAuthService.loginWithGoogle();
+
+    setState(() => isLoading = false);
+
+    if (success) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeWayangPage()),
+      );
+    } else {
+      _showSnack("Login Google gagal", Colors.red);
+    }
   }
 
   void _showSnack(String msg, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: color,
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
   }
 
   @override
@@ -114,7 +127,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         const SizedBox(height: 16),
                         const Text(
                           "Selamat Datang",
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         const Text(
@@ -156,13 +172,16 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                             minimumSize: const Size(double.infinity, 50),
                           ),
                           child: isLoading
-                              ? const CircularProgressIndicator(color: Colors.white)
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                )
                               : const Text(
                                   "Masuk",
                                   style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
                                 ),
                         ),
                         const SizedBox(height: 16),
@@ -184,9 +203,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               Text(
                                 "Masuk dengan Google",
                                 style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
                             ],
                           ),
@@ -200,7 +220,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               onTap: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (_) => const RegisterPage()),
+                                  MaterialPageRoute(
+                                    builder: (_) => const RegisterPage(),
+                                  ),
                                 );
                               },
                               child: const Text(
@@ -212,7 +234,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               ),
                             ),
                           ],
-                        )
+                        ),
                       ],
                     ),
                   ),

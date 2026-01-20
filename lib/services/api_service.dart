@@ -8,7 +8,7 @@ import '../config.dart';
 
 class ApiService {
   // ================= BASE URL =================
-  static const String baseUrl = "http://192.168.100.132:8000/api";
+  static const String baseUrl = "http://192.168.100.57:8000/api";
 
   // ================= GET TOKEN =================
   static Future<String?> getToken() async {
@@ -54,7 +54,8 @@ class ApiService {
       return false;
     }
   }
-// ================= GET PROFILE =================
+
+  // ================= GET PROFILE =================
   static Future<Map<String, dynamic>?> getProfile() async {
     try {
       final token = await getToken();
@@ -120,6 +121,7 @@ class ApiService {
       return false;
     }
   }
+
   // ================= PREDICT WAYANG =================
   static Future<Map<String, dynamic>?> predictWayang(XFile image) async {
     try {
@@ -233,10 +235,7 @@ class ApiService {
       final res = await http.post(
         Uri.parse("$baseUrl/ulasan"),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "rating": rating,
-          "komentar": komentar,
-        }),
+        body: jsonEncode({"rating": rating, "komentar": komentar}),
       );
 
       print("ULASAN STATUS: ${res.statusCode}");
