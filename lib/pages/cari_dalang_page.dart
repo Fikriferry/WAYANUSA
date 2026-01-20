@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/dalang_api.dart'; // Import ApiService yang baru
 import 'detail_dalang_page.dart'; // Pastikan file ini ada
-import '../config.dart';
+// import '../config.dart';
 
 class CariDalangPage extends StatefulWidget {
   const CariDalangPage({super.key});
@@ -21,7 +21,7 @@ class _CariDalangPageState extends State<CariDalangPage> {
 
   // URL Base untuk gambar (Sesuaikan dengan IP Flask kamu)
   // Folder static flask biasanya diakses via /static/...
-  final String imageBaseUrl = AppConfig.dalangImageUrl;
+  final String imageBaseUrl = "http://192.168.100.222:8000/static/images";
 
   @override
   void initState() {

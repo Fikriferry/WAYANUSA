@@ -4,7 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
-import '../config.dart';
+import '../models/wayang_game.dart';
+// import '../config.dart';
 
 class ApiService {
   // ================= BASE URL =================
@@ -220,6 +221,24 @@ class ApiService {
     }
   }
 
+  // === GET SINGLE ARTICLE ===
+  static Future<Map<String, dynamic>?> getArticle(int id) async {
+    try {
+      final response = await http.get(Uri.parse("$baseUrl/articles/$id"));
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        if (jsonResponse['status'] == 'success') {
+          return jsonResponse['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print("Error getArticle: $e");
+      return null;
+    }
+  }
+
   // ================= LOGOUT =================
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
@@ -245,6 +264,45 @@ class ApiService {
     } catch (e) {
       print("ULASAN ERROR: $e");
       return false;
+    }
+  }
+
+  static String imageUrl(String path) {
+    final cleaned = path.replaceAll('\\', '/').replaceFirst('static/', '');
+
+    return "$baseUrl/static/$cleaned";
+  }
+
+  // ================= WAYANG GAME =================
+  static Future<List<WayangGame>> getWayangGame() async {
+    try {
+      final res = await http.get(Uri.parse("$baseUrl/wayang-game"));
+
+      if (res.statusCode == 200) {
+        final jsonResponse = jsonDecode(res.body);
+        final List list = jsonResponse['data'];
+
+        return list.map((e) => WayangGame.fromJson(e)).toList();
+      }
+      return [];
+    } catch (e) {
+      print("Error getWayangGame: $e");
+      return [];
+    }
+  }
+
+  static Future<WayangGame?> getWayangGameDetail(int id) async {
+    try {
+      final res = await http.get(Uri.parse("$baseUrl/wayang-game/$id"));
+
+      if (res.statusCode == 200) {
+        final jsonResponse = jsonDecode(res.body);
+        return WayangGame.fromJson(jsonResponse['data']);
+      }
+      return null;
+    } catch (e) {
+      print("Error getWayangGameDetail: $e");
+      return null;
     }
   }
 }
