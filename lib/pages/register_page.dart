@@ -195,7 +195,7 @@ class _RegisterPageState extends State<RegisterPage>
                         children: [
 
                           /// LOGO
-                          Image.asset('assets/logo.png', width: 100),
+                          Image.asset('assets/welcome.png', width: 100),
                           const SizedBox(height: 16),
 
                           /// JUDUL

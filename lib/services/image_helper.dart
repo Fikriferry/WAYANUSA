@@ -1,19 +1,18 @@
 class ImageHelper {
-  static const String _base =
-      "http://192.168.1.184:8000/static/uploads/wayanggame/";
+  // ⚠️ GANTI DENGAN URL NGROK TERBARU KAMU
+  static const String baseUrl = "https://monoclinic-superboldly-tobi.ngrok-free.dev"; 
 
   static String resolve(String path) {
-    // Normalisasi slash
-    var p = path.replaceAll('\\', '/');
+    if (path.isEmpty) return "https://via.placeholder.com/150";
 
-    // Kalau sudah full URL → ambil filename saja
-    if (p.startsWith('http')) {
-      return _base + p.split('/').last;
-    }
+    // Jika sudah full URL (misal dari API yang sudah saya perbaiki sebelumnya), langsung return
+    if (path.startsWith('http')) return path;
 
-    // Ambil NAMA FILE saja (buang folder apa pun)
-    final filename = p.split('/').last;
-
-    return _base + filename;
+    // Bersihkan path dari karakter aneh
+    String cleanPath = path.replaceAll('\\', '/');
+    if (cleanPath.startsWith('/')) cleanPath = cleanPath.substring(1);
+    
+    // Gabungkan
+    return "$baseUrl/$cleanPath";
   }
 }

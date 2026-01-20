@@ -9,7 +9,7 @@ import '../models/wayang_game.dart';
 
 class ApiService {
   // ================= BASE URL =================
-  static const String baseUrl = "http://192.168.100.57:8000/api";
+  static const String baseUrl = "https://monoclinic-superboldly-tobi.ngrok-free.dev/api";
 
   // ================= GET TOKEN =================
   static Future<String?> getToken() async {
@@ -274,35 +274,59 @@ class ApiService {
   }
 
   // ================= WAYANG GAME =================
-  static Future<List<WayangGame>> getWayangGame() async {
+  static Future<List<WayangGame>> getWayangGameList() async {
     try {
-      final res = await http.get(Uri.parse("$baseUrl/wayang-game"));
+      final url = "$baseUrl/wayang-game";
+      print("🚀 Requesting: $url"); // Debug print
 
-      if (res.statusCode == 200) {
-        final jsonResponse = jsonDecode(res.body);
-        final List list = jsonResponse['data'];
+      final response = await http.get(Uri.parse(url));
 
-        return list.map((e) => WayangGame.fromJson(e)).toList();
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        if (json['data'] != null) {
+          final List data = json['data'];
+          print("✅ Dapat ${data.length} wayang");
+          return data.map((e) => WayangGame.fromJson(e)).toList();
+        }
       }
+      print("⚠️ Gagal: ${response.statusCode}");
       return [];
     } catch (e) {
-      print("Error getWayangGame: $e");
+      print("🔥 Error API: $e");
       return [];
     }
   }
 
+  // ===============================================================
+  // 2. GET DETAIL WAYANG (Untuk mulai main / merakit)
+  // ===============================================================
   static Future<WayangGame?> getWayangGameDetail(int id) async {
-    try {
-      final res = await http.get(Uri.parse("$baseUrl/wayang-game/$id"));
+    final url = "$baseUrl/wayang-game/$id";
 
-      if (res.statusCode == 200) {
-        final jsonResponse = jsonDecode(res.body);
-        return WayangGame.fromJson(jsonResponse['data']);
+    try {
+      print("🔍 [API REQUEST] Detail Wayang ID $id: $url");
+
+      final response = await http.get(Uri.parse(url))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+
+        // Flask mengirim format: { "status": "success", "data": { ... } }
+        if (jsonResponse['status'] == 'success' && jsonResponse['data'] != null) {
+          print("✅ [API SUCCESS] Detail ditemukan: ${jsonResponse['data']['nama']}");
+          
+          return WayangGame.fromJson(jsonResponse['data']);
+        }
       }
+
+      print("❌ [API ERROR] Wayang tidak ditemukan (404/500)");
       return null;
+
     } catch (e) {
-      print("Error getWayangGameDetail: $e");
+      print("🔥 [API ERROR] getWayangGameDetail: $e");
       return null;
     }
   }
 }
+

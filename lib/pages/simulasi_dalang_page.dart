@@ -1,9 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cached_network_image/cached_network_image.dart'; // Wajib install ini di pubspec.yaml
 import '../models/wayang_game.dart';
 import '../services/api_service.dart';
 import '../services/image_helper.dart';
 
+// ===============================================================
+// 1. CONTROLLER (Penyimpan Data & Posisi yang Ringan)
+// ===============================================================
+class WayangController {
+  final int id;
+  final String nama;
+  final String? badanUrl;
+  final String? tgnKananAtas;
+  final String? tgnKananBawah;
+  final String? tgnKiriAtas;
+  final String? tgnKiriBawah;
+
+  // State Posisi (Notifier) - Biar gak perlu SetState satu layar
+  final ValueNotifier<Offset> position;
+  final ValueNotifier<double> rotKiriAtas = ValueNotifier(0.5);
+  final ValueNotifier<double> rotKiriBawah = ValueNotifier(0.8);
+  final ValueNotifier<double> rotKananAtas = ValueNotifier(0.4);
+  final ValueNotifier<double> rotKananBawah = ValueNotifier(0.3);
+
+  WayangController({
+    required this.id,
+    required this.nama,
+    this.badanUrl,
+    this.tgnKananAtas, this.tgnKananBawah,
+    this.tgnKiriAtas, this.tgnKiriBawah,
+    required Offset startPos,
+  }) : position = ValueNotifier(startPos);
+  
+  void dispose() {
+    position.dispose();
+    rotKiriAtas.dispose();
+    rotKiriBawah.dispose();
+    rotKananAtas.dispose();
+    rotKananBawah.dispose();
+  }
+}
+
+// ===============================================================
+// 2. HALAMAN UTAMA (LOGIKA GAME)
+// ===============================================================
 class SimulasiDalangPage extends StatefulWidget {
   const SimulasiDalangPage({super.key});
 
@@ -12,20 +53,16 @@ class SimulasiDalangPage extends StatefulWidget {
 }
 
 class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
-  double _startDy = 0;
-  double _startAngle = 0;
-  final List<Map<String, dynamic>> activeWayang = [];
-  final double deleteZoneSize = 50;
-
-  List<WayangGame> wayangList = [];
+  final List<WayangController> activeWayang = [];
+  List<WayangGame> libraryWayang = [];
   bool isLoading = true;
   bool isOverDeleteZone = false;
+  final double deleteZoneSize = 70;
 
   @override
   void initState() {
     super.initState();
-    _loadWayang();
-
+    _loadData();
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
@@ -34,409 +71,347 @@ class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
 
   @override
   void dispose() {
+    for (var w in activeWayang) w.dispose();
     SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
+      DeviceOrientation.portraitUp, 
+      DeviceOrientation.portraitDown
     ]);
     super.dispose();
   }
 
-  Future<void> _loadWayang() async {
+  Future<void> _loadData() async {
     try {
-      final data = await ApiService.getWayangGame();
-      setState(() {
-        wayangList = data;
-        isLoading = false;
-      });
+      final data = await ApiService.getWayangGameList();
+      if(mounted) setState(() { libraryWayang = data; isLoading = false; });
     } catch (_) {
-      setState(() => isLoading = false);
+      if(mounted) setState(() => isLoading = false);
     }
+  }
+
+  void _bringToFront(int index) {
+    if (index == activeWayang.length - 1) return;
+    setState(() {
+      final item = activeWayang.removeAt(index);
+      activeWayang.add(item);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final screen = MediaQuery.of(context).size;
-    final isLandscape = screen.width > screen.height;
+    final size = MediaQuery.of(context).size;
+    // Skala responsif (HP Kecil vs Tablet)
+    final scaleFactor = size.height / 400.0; 
 
     return Scaffold(
-      backgroundColor: const Color(0xffFEFBF5),
-      appBar: AppBar(
-        title: const Text(
-          "Simulasi Dalang",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: const Color(0xffF3E7D3),
-      ),
+      backgroundColor: const Color(0xffFEFBF5), // Warna background original
       body: Stack(
         children: [
-          /// BACKGROUND
+          // LAYER 1: BACKGROUND PANGGUNG
           Positioned.fill(
             child: Image.asset(
               "assets/background_panggung.png",
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              errorBuilder: (_,__,___) => Container(color: Colors.brown),
             ),
           ),
 
-          /// WAYANG AKTIF
-          ...activeWayang.map((w) {
-            final index = activeWayang.indexOf(w);
-            return Positioned(
-              left: w['position'].dx,
-              top: w['position'].dy,
-              child: GestureDetector(
-                behavior: HitTestBehavior.deferToChild, // 🔥 INI KUNCI
-                onPanUpdate: (d) {
-                  setState(() {
-                    w['position'] += d.delta;
+          // LAYER 2: WAYANG (Dirender ulang hanya saat bergerak)
+          ...activeWayang.asMap().entries.map((entry) {
+            final index = entry.key;
+            final controller = entry.value;
 
-                    final centerY = w['position'].dy + 120;
-                    isOverDeleteZone =
-                        w['position'].dx < deleteZoneSize &&
-                        centerY > screen.height - deleteZoneSize;
-                  });
-                },
-                onPanEnd: (_) {
-                  if (isOverDeleteZone) {
-                    setState(() {
-                      activeWayang.removeAt(index);
-                      isOverDeleteZone = false;
-                    });
-                  }
-                },
-                child: _WayangStack(w),
-              ),
+            return ValueListenableBuilder<Offset>(
+              valueListenable: controller.position,
+              builder: (context, pos, child) {
+                return Positioned(
+                  left: pos.dx,
+                  top: pos.dy,
+                  child: GestureDetector(
+                    onPanStart: (_) => _bringToFront(index),
+                    onPanUpdate: (d) {
+                      controller.position.value += d.delta; 
+                      
+                      // Cek Delete Zone
+                      final zoneY = size.height - deleteZoneSize;
+                      final isInZone = pos.dx < deleteZoneSize && pos.dy > zoneY;
+                      if (isOverDeleteZone != isInZone) {
+                        setState(() => isOverDeleteZone = isInZone);
+                      }
+                    },
+                    onPanEnd: (_) {
+                      if (isOverDeleteZone) {
+                        setState(() {
+                          controller.dispose();
+                          activeWayang.removeAt(index);
+                          isOverDeleteZone = false;
+                        });
+                      }
+                    },
+                    // RepaintBoundary: Isolasi render wayang biar smooth
+                    child: RepaintBoundary(
+                      child: Transform.scale(
+                        scale: scaleFactor, // Responsif size
+                        alignment: Alignment.topLeft,
+                        child: WayangActor(ctrl: controller),
+                      ),
+                    ),
+                  ),
+                );
+              },
             );
           }),
 
-          /// BOTTOM CONTROL
+          // LAYER 3: UI DELETE ZONE
           Positioned(
-            left: 20,
-            right: 20,
-            bottom: 20,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                CircleAvatar(
-                  radius: deleteZoneSize / 2,
-                  backgroundColor: isOverDeleteZone
-                      ? Colors.red
-                      : Colors.red.withOpacity(.4),
-                  child: const Icon(Icons.delete, color: Colors.white),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () => _showWayangPicker(context),
-                  icon: const Icon(Icons.theater_comedy),
-                  label: const Text("Tambah Wayang"),
-                ),
-              ],
+            left: 20, bottom: 20,
+            child: AnimatedScale(
+              scale: isOverDeleteZone ? 1.2 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              child: CircleAvatar(
+                radius: deleteZoneSize / 2,
+                backgroundColor: isOverDeleteZone ? Colors.red : Colors.red.withOpacity(0.4),
+                child: const Icon(Icons.delete, color: Colors.white),
+              ),
             ),
           ),
 
-          /// OVERLAY JIKA PORTRAIT
-          if (!isLandscape)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black54,
-                child: const Center(
-                  child: Text(
-                    "Rotate ke landscape",
-                    style: TextStyle(color: Colors.white, fontSize: 24),
-                  ),
-                ),
+          // LAYER 4: TOMBOL TAMBAH
+          Positioned(
+            right: 20, bottom: 20,
+            child: ElevatedButton.icon(
+              onPressed: () => _showPicker(context),
+              icon: const Icon(Icons.theater_comedy),
+              label: const Text("Tambah Wayang"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xffF3E7D3),
+                foregroundColor: Colors.brown,
               ),
             ),
+          ),
+          
+          // LAYER 5: TOMBOL BACK
+          Positioned(
+             top: 20, left: 20,
+             child: CircleAvatar(
+               backgroundColor: Colors.white54,
+               child: IconButton(
+                 icon: const Icon(Icons.arrow_back, color: Colors.black),
+                 onPressed: () => Navigator.pop(context),
+               ),
+             ),
+          ),
         ],
       ),
     );
   }
 
-  /// ===== WIDGET WAYANG =====
-  Widget _WayangStack(Map<String, dynamic> w) {
+  void _showPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context, backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        height: 180,
+        decoration: const BoxDecoration(
+          color: Colors.white, 
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))
+        ),
+        child: isLoading 
+          ? const Center(child: CircularProgressIndicator()) 
+          : ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.all(15),
+              itemCount: libraryWayang.length,
+              itemBuilder: (_, i) {
+                final w = libraryWayang[i];
+                return GestureDetector(
+                  onTap: () {
+                    // Posisi awal muncul di tengah layar
+                    final startPos = Offset(MediaQuery.of(context).size.width/2 - 130, 100);
+                    setState(() {
+                      activeWayang.add(WayangController(
+                        id: w.id, nama: w.nama,
+                        badanUrl: w.badan != null ? ImageHelper.resolve(w.badan!) : null,
+                        tgnKananAtas: w.tanganKananAtas != null ? ImageHelper.resolve(w.tanganKananAtas!) : null,
+                        tgnKananBawah: w.tanganKananBawah != null ? ImageHelper.resolve(w.tanganKananBawah!) : null,
+                        tgnKiriAtas: w.tanganKiriAtas != null ? ImageHelper.resolve(w.tanganKiriAtas!) : null,
+                        tgnKiriBawah: w.tanganKiriBawah != null ? ImageHelper.resolve(w.tanganKiriBawah!) : null,
+                        startPos: startPos,
+                      ));
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    width: 100, margin: const EdgeInsets.only(right: 10),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: CachedNetworkImage(
+                            imageUrl: ImageHelper.resolve(w.thumbnail ?? ''), 
+                            errorWidget: (_,__,___)=>const Icon(Icons.broken_image)
+                          )
+                        ),
+                        Text(w.nama, maxLines: 1, overflow: TextOverflow.ellipsis)
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+      )
+    );
+  }
+}
+
+// ===============================================================
+// 3. WIDGET RIGGING (KOORDINAT DIKEMBALIKAN KE KODE ASLI)
+// ===============================================================
+class WayangActor extends StatelessWidget {
+  final WayangController ctrl;
+  const WayangActor({super.key, required this.ctrl});
+
+  @override
+  Widget build(BuildContext context) {
+    // 🔥 KOORDINAT ASLI DARI KODE ANDA
     const double badanLeft = 90;
     const double badanTop = 40;
 
     return SizedBox(
-      width: 260,
-      height: 320,
+      width: 260, height: 320,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          /// ================= BADAN =================
-          if (w['badan'] != null)
-            Positioned(
-              left: badanLeft,
-              top: badanTop,
-              child: Image.network(w['badan'], height: 260),
+          // === BADAN ===
+          if (ctrl.badanUrl != null)
+             Positioned(
+               left: badanLeft, 
+               top: badanTop, 
+               child: CachedNetworkImage(imageUrl: ctrl.badanUrl!, height: 260)
+             ),
+          
+          // === LENGAN KIRI (Belakang) ===
+          if (ctrl.tgnKiriAtas != null)
+            _Limb(
+              url: ctrl.tgnKiriAtas,
+              angleNotifier: ctrl.rotKiriAtas,
+              // Koordinat Asli: left: badanLeft + 20, top: badanTop + 70
+              left: badanLeft + 20, 
+              top: badanTop + 70, 
+              // Pivot Asli: 25, 5
+              pivotX: 25.0, pivotY: 5.0,
+              
+              child: ctrl.tgnKiriBawah != null ? _Limb(
+                url: ctrl.tgnKiriBawah,
+                angleNotifier: ctrl.rotKiriBawah,
+                // Koordinat Asli: left: -35, top: 97
+                left: -35, top: 97, 
+                // Pivot Asli: 52, 5
+                pivotX: 52.0, pivotY: 5.0,
+                hasStick: true, inverse: false,
+              ) : null,
             ),
 
-          /// ================= LENGAN KIRI =================
-          if (w['tangan_kiri_atas'] != null)
-            Positioned(
-              left: badanLeft + 20,
-              top: badanTop + 70,
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onPanStart: (d) {
-                  _startDy = d.globalPosition.dy;
-                  _startAngle = w['angle_kiri_atas'];
-                },
-                onPanUpdate: (d) {
-                  final diff = d.globalPosition.dy - _startDy;
-                  setState(() {
-                    w['angle_kiri_atas'] = (_startAngle + diff * 0.015).clamp(
-                      -1.2,
-                      0.4,
-                    );
-                  });
-                },
-                child: SizedBox(
-                  // 🔥 HITBOX BESAR
-                  width: 120,
-                  height: 160,
-                  child: Transform(
-                    transform: Matrix4.identity()
-                      ..translate(
-                        25.0,
-                        05.0,
-                      ) // 🔴 PIVOT KIRI ATAS (ATUR SENDIRI)
-                      ..rotateZ(w['angle_kiri_atas'])
-                      ..translate(-25.0, -05.0),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Image.network(w['tangan_kiri_atas'], height: 110),
-                        if (false) // ganti false kalau mau matiin
-                          Positioned(left: 25, top: 05, child: _debugDot()),
-
-                        /// SIKU KIRI
-                        if (w['tangan_kiri_bawah'] != null)
-                          Positioned(
-                            left: -35,
-                            top: 97,
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onPanStart: (d) {
-                                _startDy = d.globalPosition.dy;
-                                _startAngle = w['angle_kiri_bawah'];
-                              },
-                              onPanUpdate: (d) {
-                                final diff = d.globalPosition.dy - _startDy;
-                                setState(() {
-                                  w['angle_kiri_bawah'] =
-                                      (_startAngle + diff * 0.02).clamp(
-                                        -1.6,
-                                        1.6,
-                                      );
-                                });
-                              },
-                              child: SizedBox(
-                                width: 90,
-                                height: 120,
-                                child: Transform(
-                                  transform: Matrix4.identity()
-                                    ..translate(
-                                      52.0,
-                                      5.0,
-                                    ) // 🔴 PIVOT SIKU KIRI
-                                    ..rotateZ(w['angle_kiri_bawah'])
-                                    ..translate(-52.0, -5.0),
-                                  child: Stack(
-                                    children: [
-                                      Image.network(
-                                        w['tangan_kiri_bawah'],
-                                        height: 100,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-          /// ================= LENGAN KANAN =================
-          /// ================= LENGAN KANAN =================
-          if (w['tangan_kanan_atas'] != null)
-            Positioned(
-              left: badanLeft + 150,
-              top: badanTop + 45,
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onPanStart: (d) {
-                  _startDy = d.globalPosition.dy;
-                  _startAngle = w['angle_kanan_atas'];
-                },
-                onPanUpdate: (d) {
-                  final diff =
-                      _startDy - d.globalPosition.dy; // 🔥 ARAH DIBALIK
-                  setState(() {
-                    w['angle_kanan_atas'] = (_startAngle + diff * 0.015).clamp(
-                      -0.4,
-                      1.2,
-                    );
-                  });
-                },
-                child: SizedBox(
-                  width: 120,
-                  height: 160,
-                  child: Transform(
-                    transform: Matrix4.identity()
-                      ..translate(10.0, 10.0) // 🔴 PIVOT KANAN ATAS
-                      ..rotateZ(w['angle_kanan_atas'])
-                      ..translate(-10.0, -10.0),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Image.network(w['tangan_kanan_atas'], height: 85),
-                        if (false) // ganti false kalau mau matiin
-                          Positioned(right: 10, top: 20, child: _debugDot()),
-
-                        /// SIKU KANAN
-                        if (w['tangan_kanan_bawah'] != null)
-                          Positioned(
-                            right: 30,
-                            top: 65,
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onPanStart: (d) {
-                                _startDy = d.globalPosition.dy;
-                                _startAngle = w['angle_kanan_bawah'];
-                              },
-                              onPanUpdate: (d) {
-                                final diff = _startDy - d.globalPosition.dy;
-                                setState(() {
-                                  w['angle_kanan_bawah'] =
-                                      (_startAngle + diff * 0.02).clamp(
-                                        -1.6,
-                                        1.6,
-                                      );
-                                });
-                              },
-                              child: SizedBox(
-                                width: 100,
-                                height: 110,
-                                child: Transform(
-                                  transform: Matrix4.identity()
-                                    ..translate(
-                                      93.0,
-                                      12.0,
-                                    ) // 🔴 PIVOT SIKU KANAN
-                                    ..rotateZ(w['angle_kanan_bawah'])
-                                    ..translate(-93.0, -12.0),
-                                  child: Stack(
-                                    children: [
-                                      Image.network(
-                                        w['tangan_kanan_bawah'],
-                                        height: 80,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+          // === LENGAN KANAN (Depan) ===
+          if (ctrl.tgnKananAtas != null)
+            _Limb(
+              url: ctrl.tgnKananAtas,
+              angleNotifier: ctrl.rotKananAtas,
+              // Koordinat Asli: left: badanLeft + 150, top: badanTop + 45
+              left: badanLeft + 150, 
+              top: badanTop + 45, 
+              // Pivot Asli: 10, 10
+              pivotX: 10.0, pivotY: 10.0,
+              inverse: true, // Gerakan dibalik
+              
+              child: ctrl.tgnKananBawah != null ? _Limb(
+                url: ctrl.tgnKananBawah,
+                angleNotifier: ctrl.rotKananBawah,
+                // Koordinat Asli: left: 30, top: 65
+                left: 30, top: 65, 
+                // Pivot Asli: 93, 12
+                pivotX: 93.0, pivotY: 12.0,
+                hasStick: true, inverse: true, // Gerakan dibalik
+              ) : null,
             ),
         ],
       ),
     );
   }
+}
 
-  Widget _debugDot() {
-    return Container(
-      width: 6,
-      height: 6,
-      decoration: const BoxDecoration(
-        color: Colors.red,
-        shape: BoxShape.circle,
-      ),
-    );
-  }
+// ===============================================================
+// 4. LIMB CONTROL (LOGIKA ROTASI)
+// ===============================================================
+class _Limb extends StatelessWidget {
+  final String? url;
+  final ValueNotifier<double> angleNotifier;
+  final double left, top, pivotX, pivotY;
+  final Widget? child;
+  final bool hasStick, inverse;
 
-  /// ===== BOTTOM SHEET PICKER =====
-  void _showWayangPicker(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (_) {
-        if (isLoading) {
-          return const Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
+  const _Limb({
+    required this.url, required this.angleNotifier,
+    required this.left, required this.top,
+    required this.pivotX, required this.pivotY,
+    this.child, this.hasStick = false, this.inverse = false,
+  });
 
-        return SizedBox(
-          height: 180,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: wayangList.length,
-            itemBuilder: (_, i) {
-              final wayang = wayangList[i];
+  @override
+  Widget build(BuildContext context) {
+    if (url == null) return const SizedBox();
 
-              final thumbnail = wayang.thumbnail != null
-                  ? ImageHelper.resolve(wayang.thumbnail!)
-                  : "https://via.placeholder.com/150";
-
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    activeWayang.add({
-                      'badan': wayang.badan != null
-                          ? ImageHelper.resolve(wayang.badan!)
-                          : null,
-                      'tangan_kanan_atas': wayang.tanganKananAtas != null
-                          ? ImageHelper.resolve(wayang.tanganKananAtas!)
-                          : null,
-                      'tangan_kanan_bawah': wayang.tanganKananBawah != null
-                          ? ImageHelper.resolve(wayang.tanganKananBawah!)
-                          : null,
-                      'tangan_kiri_atas': wayang.tanganKiriAtas != null
-                          ? ImageHelper.resolve(wayang.tanganKiriAtas!)
-                          : null,
-                      'tangan_kiri_bawah': wayang.tanganKiriBawah != null
-                          ? ImageHelper.resolve(wayang.tanganKiriBawah!)
-                          : null,
-                      'position': const Offset(150, 200),
-
-                      // ===== SUDUT =====
-                      'angle_kiri_atas': 0.5,
-                      'angle_kiri_bawah': 0.8,
-                      'angle_kanan_atas': 0.4,
-                      'angle_kanan_bawah': 0.3,
-                    });
-                  });
-                  Navigator.pop(context);
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    children: [
-                      Image.network(
-                        thumbnail,
-                        height: 90,
-                        errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.image_not_supported),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(wayang.nama),
-                    ],
-                  ),
+    return ValueListenableBuilder<double>(
+      valueListenable: angleNotifier,
+      builder: (context, angle, _) {
+        return Positioned(
+          left: left, top: top,
+          child: Transform(
+            transform: Matrix4.identity()
+              ..translate(pivotX, pivotY) // Titik putar
+              ..rotateZ(angle)
+              ..translate(-pivotX, -pivotY), // Kembalikan posisi
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                CachedNetworkImage(imageUrl: url!, height: (hasStick && inverse) ? 80 : (inverse ? 85 : 100)), // Tinggi disesuaikan dg kode asli
+                
+                if (child != null) child!,
+                
+                // Stick Transparan untuk Area Sentuh
+                if (hasStick) _StickHandle(
+                  inverse: inverse, 
+                  onDrag: (dy) {
+                    // Logika Rotasi: dy adalah perubahan vertikal
+                    final diff = inverse ? -dy : dy; 
+                    angleNotifier.value = (angle + diff * 0.02).clamp(-1.6, 1.6);
+                  }
                 ),
-              );
-            },
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+}
+
+class _StickHandle extends StatelessWidget {
+  final bool inverse;
+  final Function(double) onDrag;
+  const _StickHandle({required this.inverse, required this.onDrag});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      // Stick menjulur ke bawah untuk pegangan
+      bottom: -40,
+      left: inverse ? 10 : null, right: inverse ? null : 10,
+      child: GestureDetector(
+        onPanUpdate: (d) => onDrag(d.delta.dy),
+        child: Container(
+          width: 50, height: 100, // Hitbox besar biar gampang kesentuh
+          color: Colors.transparent, // Transparan agar tidak menutupi gambar
+          // Debugging: Ganti warna transparent jadi Colors.red.withOpacity(0.3) kalau mau lihat area sentuh
+        ),
+      ),
     );
   }
 }

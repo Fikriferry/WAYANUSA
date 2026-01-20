@@ -17,6 +17,7 @@ import 'pages/help_support_page.dart';
 import 'pages/about_app_page.dart';
 import 'pages/smart_wayang_page.dart';
 import 'pages/article_list_page.dart';
+import 'pages/welcome_screen.dart';
 
 void main() {
   runApp(const WayanusaApp());
@@ -37,7 +38,7 @@ class WayanusaApp extends StatelessWidget {
       ),
 
       //  halaman pertama tetap login
-      initialRoute: '/login',
+      initialRoute: '/welcome',
 
       //  semua route
       routes: {
@@ -79,6 +80,8 @@ class WayanusaApp extends StatelessWidget {
         '/smart_wayang': (context) => const SmartWayangPage(),
 
         '/article_list': (context) => const ArticleListPage(),
+
+        '/welcome': (context) => const WelcomeScreen(),
       },
     );
   }

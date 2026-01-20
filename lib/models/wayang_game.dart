@@ -21,8 +21,8 @@ class WayangGame {
 
   factory WayangGame.fromJson(Map<String, dynamic> json) {
     return WayangGame(
-      id: json['id'],
-      nama: json['nama'],
+      id: json['id'] ?? 0,
+      nama: json['nama'] ?? 'Tanpa Nama',
       thumbnail: json['thumbnail'],
       badan: json['badan'],
       tanganKananAtas: json['tangan_kanan_atas'],
