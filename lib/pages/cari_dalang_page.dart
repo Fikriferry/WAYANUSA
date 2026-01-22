@@ -21,7 +21,7 @@ class _CariDalangPageState extends State<CariDalangPage> {
 
   // URL Base untuk gambar (Sesuaikan dengan IP Flask kamu)
   // Folder static flask biasanya diakses via /static/...
-  final String imageBaseUrl = "https://monoclinic-superboldly-tobi.ngrok-free.dev/static/images";
+  final String imageBaseUrl = "https://monoclinic-superboldly-tobi.ngrok-free.dev/static/uploads";
 
   @override
   void initState() {

@@ -5,11 +5,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/wayang_game.dart';
+import 'google_auth.dart';
 // import '../config.dart';
 
 class ApiService {
   // ================= BASE URL =================
-  static const String baseUrl = "https://monoclinic-superboldly-tobi.ngrok-free.dev/api";
+  static const String baseUrl =
+      "https://monoclinic-superboldly-tobi.ngrok-free.dev/api";
 
   // ================= GET TOKEN =================
   static Future<String?> getToken() async {
@@ -63,25 +65,21 @@ class ApiService {
       if (token == null) return null;
 
       final res = await http.get(
-        Uri.parse('$baseUrl/auth/profile'), // samakan endpoint
+        Uri.parse('$baseUrl/auth/profile'),
         headers: {
           "Authorization": "Bearer $token",
-          "Content-Type": "application/json", // tambahkan
+          "Content-Type": "application/json",
         },
       );
 
       if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        if (data is Map<String, dynamic>) {
-          return data;
-        } else {
-          debugPrint("Profile data tidak valid: $data");
-          return null;
-        }
-      } else {
-        debugPrint("Profile error: ${res.body}");
+        return jsonDecode(res.body);
+      } else if (res.statusCode == 401) {
+        // Jika token expired/salah, hapus saja biar user diminta login ulang
+        await logout();
         return null;
       }
+      return null;
     } catch (e) {
       debugPrint("Profile exception: $e");
       return null;
@@ -92,33 +90,43 @@ class ApiService {
   static Future<bool> updateProfile({
     required String name,
     required String email,
-    String? password,
+    required String oldPassword, // Tambahkan ini
+    String? password, // Ini password baru
+    XFile? imageFile,
   }) async {
     final token = await getToken();
     if (token == null) return false;
 
     try {
-      final res = await http.put(
-        Uri.parse('$baseUrl/auth/profile'), // endpoint sama
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $token",
-        },
-        body: jsonEncode({
-          "name": name,
-          "email": email,
-          if (password != null && password.isNotEmpty) "password": password,
-        }),
+      var request = http.MultipartRequest(
+        'PUT',
+        Uri.parse('$baseUrl/auth/profile'),
       );
+      request.headers['Authorization'] = "Bearer $token";
 
-      if (res.statusCode == 200) {
-        return true;
-      } else {
-        debugPrint("Update profile error: ${res.body}");
-        return false;
+      // Kirim data teks
+      request.fields['name'] = name;
+      request.fields['email'] = email;
+      request.fields['old_password'] = oldPassword; // Kirim ke Flask
+
+      if (password != null && password.isNotEmpty) {
+        request.fields['password'] = password;
       }
+
+      if (imageFile != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'profile_pic',
+            imageFile.path,
+            contentType: MediaType('image', 'jpeg'),
+          ),
+        );
+      }
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+      return response.statusCode == 200;
     } catch (e) {
-      debugPrint("Update profile exception: $e");
       return false;
     }
   }
@@ -241,8 +249,18 @@ class ApiService {
 
   // ================= LOGOUT =================
   static Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
+    try {
+      // 1. Panggil logout Google untuk memastikan sesi Google terputus (signOut & disconnect)
+      await GoogleAuthService.logout();
+
+      // 2. Bersihkan token JWT dari SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('token');
+
+      print("✅ Logout berhasil: Semua sesi dan token dibersihkan.");
+    } catch (e) {
+      print("⚠️ Error saat logout: $e");
+    }
   }
 
   // ================= ulasan =================
@@ -268,9 +286,16 @@ class ApiService {
   }
 
   static String imageUrl(String path) {
+    if (path.isEmpty) return "";
+
+    // Ambil Root URL (Hapus /api dari baseUrl)
+    final rootUrl = baseUrl.replaceAll('/api', '');
+
+    // Bersihkan path dari backslash Windows dan kata 'static/' jika ada
     final cleaned = path.replaceAll('\\', '/').replaceFirst('static/', '');
 
-    return "$baseUrl/static/$cleaned";
+    // Hasilnya: https://ngrok.dev/static/uploads/profile_pics/user_1.jpg
+    return "$rootUrl/static/$cleaned";
   }
 
   // ================= WAYANG GAME =================
@@ -306,27 +331,29 @@ class ApiService {
     try {
       print("🔍 [API REQUEST] Detail Wayang ID $id: $url");
 
-      final response = await http.get(Uri.parse(url))
+      final response = await http
+          .get(Uri.parse(url))
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
 
         // Flask mengirim format: { "status": "success", "data": { ... } }
-        if (jsonResponse['status'] == 'success' && jsonResponse['data'] != null) {
-          print("✅ [API SUCCESS] Detail ditemukan: ${jsonResponse['data']['nama']}");
-          
+        if (jsonResponse['status'] == 'success' &&
+            jsonResponse['data'] != null) {
+          print(
+            "✅ [API SUCCESS] Detail ditemukan: ${jsonResponse['data']['nama']}",
+          );
+
           return WayangGame.fromJson(jsonResponse['data']);
         }
       }
 
       print("❌ [API ERROR] Wayang tidak ditemukan (404/500)");
       return null;
-
     } catch (e) {
       print("🔥 [API ERROR] getWayangGameDetail: $e");
       return null;
     }
   }
 }
-

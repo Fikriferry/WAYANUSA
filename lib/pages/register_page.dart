@@ -1,16 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'login_page.dart';
 import '../services/api_service.dart';
 
-/// =====================================================
-/// REGISTER PAGE
-/// Fungsi:
-/// - Registrasi user baru
-/// - Validasi input
-/// - Kirim data ke API
-/// - Animasi masuk halaman
-/// - Navigasi ke LoginPage jika sukses
-/// =====================================================
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -18,68 +10,42 @@ class RegisterPage extends StatefulWidget {
   State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage>
-    with SingleTickerProviderStateMixin {
-
-  /// -----------------------------
-  /// TEXT CONTROLLERS
-  /// Digunakan untuk mengambil nilai input user
-  /// -----------------------------
+class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderStateMixin {
+  // Controller untuk Input
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController =
-      TextEditingController();
+  final TextEditingController confirmPasswordController = TextEditingController();
 
-  /// -----------------------------
-  /// STATE LOADING
-  /// true  -> tombol disable + loading muncul
-  /// false -> tombol aktif
-  /// -----------------------------
+  // Status State
   bool isLoading = false;
+  bool _isObscure = true;
+  bool _isObscureConfirm = true;
 
-  /// -----------------------------
-  /// ANIMASI
-  /// Fade + Slide dari bawah
-  /// -----------------------------
+  // Controller Animasi
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
 
-  /// =====================================================
-  /// INIT STATE
-  /// Dipanggil pertama kali saat halaman dibuka
-  /// =====================================================
   @override
   void initState() {
     super.initState();
-
-    /// Controller animasi utama
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1000),
     );
 
-    /// Animasi fade (opacity 0 -> 1)
-    _fadeAnim =
-        CurvedAnimation(parent: _animController, curve: Curves.easeIn);
-
-    /// Animasi slide (dari bawah ke atas)
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeIn);
+    
+    // ANIMASI GESER DARI KANAN KE KIRI
     _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.2), // 20% dari bawah
+      begin: const Offset(1.0, 0.0), 
       end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeOut),
-    );
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOutQuart));
 
-    /// Jalankan animasi
     _animController.forward();
   }
 
-  /// =====================================================
-  /// DISPOSE
-  /// Membersihkan controller untuk mencegah memory leak
-  /// =====================================================
   @override
   void dispose() {
     _animController.dispose();
@@ -90,245 +56,303 @@ class _RegisterPageState extends State<RegisterPage>
     super.dispose();
   }
 
-  /// =====================================================
-  /// HANDLE REGISTER
-  /// - Validasi input
-  /// - Panggil API register
-  /// - Tampilkan notifikasi
-  /// =====================================================
   Future<void> handleRegister() async {
     final name = nameController.text.trim();
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
     final confirmPassword = confirmPasswordController.text.trim();
 
-    /// Validasi field kosong
     if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      _showSnack("Semua field wajib diisi", Colors.red);
+      _showSnack("Waduh, isi semua datanya dulu ya!", Colors.orange);
       return;
     }
 
-    /// Validasi password & konfirmasi
     if (password != confirmPassword) {
-      _showSnack("Konfirmasi kata sandi tidak sama", Colors.red);
+      _showSnack("Konfirmasi kata sandinya beda euy!", Colors.redAccent);
       return;
     }
 
-    /// Aktifkan loading
     setState(() => isLoading = true);
-
-    /// Panggil API register
-    final success = await ApiService.register(
-      name: name,
-      email: email,
-      password: password,
-    );
-
-    /// Matikan loading
+    final success = await ApiService.register(name: name, email: email, password: password);
     setState(() => isLoading = false);
 
-    /// Jika berhasil -> ke login
     if (success) {
-      _showSnack("Registrasi berhasil, silakan login", Colors.green);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginPage()),
-      );
+      _showSnack("Berhasil! Silakan masuk ke Wayanusa", Colors.green);
+      if (!mounted) return;
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage()));
     } else {
-      _showSnack("Registrasi gagal", Colors.red);
+      _showSnack("Daftar gagal, coba lagi nanti ya", Colors.redAccent);
     }
   }
 
-  /// =====================================================
-  /// SNACKBAR HELPER
-  /// =====================================================
   void _showSnack(String msg, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(msg),
+        content: Text(msg, style: GoogleFonts.poppins()),
         backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
 
-  /// =====================================================
-  /// BUILD UI
-  /// =====================================================
   @override
   Widget build(BuildContext context) {
+    final Color primaryGold = const Color(0xFFD4A373);
+    final Color deepBrown = const Color(0xFF4B3425);
+
     return Scaffold(
-      body: Container(
-        /// Background gradasi khas Wayang / Wayanusa
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFFB6783D),
-              Color(0xFFD4A373),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      body: Stack(
+        children: [
+          // 1. BACKGROUND GRADIENT MEWAH
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [deepBrown, primaryGold],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
           ),
-        ),
 
-        child: SafeArea(
-          child: Center(
-
-            /// Animasi masuk
-            child: FadeTransition(
-              opacity: _fadeAnim,
-              child: SlideTransition(
-                position: _slideAnim,
-
-                /// Card utama
-                child: Card(
-                  elevation: 10,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  margin: const EdgeInsets.symmetric(horizontal: 24),
-
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-
-                          /// LOGO
-                          Image.asset('assets/welcome.png', width: 100),
-                          const SizedBox(height: 16),
-
-                          /// JUDUL
-                          const Text(
-                            "Buat Akun Baru",
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
+          // 2. KONTEN UTAMA
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                child: FadeTransition(
+                  opacity: _fadeAnim,
+                  child: SlideTransition(
+                    position: _slideAnim,
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 20),
+                        Text(
+                          "Selamat Datang!",
+                          style: GoogleFonts.poppins(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 2,
                           ),
-                          const SizedBox(height: 6),
-                          const Text(
-                            "Daftar untuk mulai menjelajah Wayang",
-                            style: TextStyle(color: Colors.grey),
-                          ),
+                        ),
+                        const SizedBox(height: 40),
 
-                          const SizedBox(height: 20),
-
-                          /// NAMA
-                          TextField(
-                            controller: nameController,
-                            decoration: InputDecoration(
-                              labelText: "Nama Lengkap",
-                              prefixIcon: const Icon(Icons.person_outline),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                        // STACK UNTUK LOGO MELAYANG
+                        Stack(
+                          alignment: Alignment.topCenter,
+                          clipBehavior: Clip.none,
+                          children: [
+                            // KARTU FORM (Diberi margin top 50 agar logo bisa overlap)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 50),
+                              child: _buildRegisterForm(primaryGold, deepBrown),
                             ),
-                          ),
-                          const SizedBox(height: 14),
-
-                          /// EMAIL
-                          TextField(
-                            controller: emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: InputDecoration(
-                              labelText: "Email",
-                              prefixIcon: const Icon(Icons.email_outlined),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-
-                          /// PASSWORD
-                          TextField(
-                            controller: passwordController,
-                            obscureText: true,
-                            decoration: InputDecoration(
-                              labelText: "Kata Sandi",
-                              prefixIcon: const Icon(Icons.lock_outline),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-
-                          /// KONFIRMASI PASSWORD
-                          TextField(
-                            controller: confirmPasswordController,
-                            obscureText: true,
-                            decoration: InputDecoration(
-                              labelText: "Konfirmasi Kata Sandi",
-                              prefixIcon: const Icon(Icons.lock_reset),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 24),
-
-                          /// TOMBOL DAFTAR
-                          ElevatedButton(
-                            onPressed: isLoading ? null : handleRegister,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFB6783D),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              minimumSize:
-                                  const Size(double.infinity, 50),
-                            ),
-                            child: isLoading
-                                ? const CircularProgressIndicator(
-                                    color: Colors.white,
-                                  )
-                                : const Text(
-                                    "Daftar",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                            
+                            // LOGO DALAM LINGKARAN DEKORATIF
+                            Positioned(
+                              top: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(18),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.15),
+                                      blurRadius: 25,
+                                      offset: const Offset(0, 12),
                                     ),
-                                  ),
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          /// LINK KE LOGIN
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text("Sudah punya akun? "),
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const LoginPage(),
-                                    ),
-                                  );
-                                },
-                                child: const Text(
-                                  "Masuk",
-                                  style: TextStyle(
-                                    color: Color(0xFFB6783D),
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  ],
+                                ),
+                                child: Image.asset(
+                                  'assets/welcome.png',
+                                  width: 75,
+                                  height: 75,
                                 ),
                               ),
-                            ],
-                          ),
-                        ],
-                      ),
+                            ),
+                          ],
+                        ),
+                        
+                        const SizedBox(height: 35),
+                        
+                        // FOOTER NAVIGASI KE LOGIN
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text("Sudah punya akun? ", style: GoogleFonts.poppins(color: Colors.white70)),
+                            GestureDetector(
+                              onTap: () => Navigator.pushReplacement(
+                                context, 
+                                MaterialPageRoute(builder: (_) => const LoginPage())
+                              ),
+                              child: Text(
+                                "Masuk Sekarang",
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white, 
+                                  fontWeight: FontWeight.bold,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                      ],
                     ),
                   ),
                 ),
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRegisterForm(Color accent, Color dark) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 70, 24, 30), // Top padding besar untuk area logo
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.96),
+        borderRadius: BorderRadius.circular(40),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2), 
+            blurRadius: 30, 
+            offset: const Offset(0, 20)
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            "Mulai Perjalananmu",
+            style: GoogleFonts.poppins(
+              fontSize: 22, 
+              fontWeight: FontWeight.bold, 
+              color: dark
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Daftar dan lestarikan budaya bersama kami",
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 30),
+          
+          _buildTextField(controller: nameController, label: "Nama Lengkap", icon: Icons.person_outline_rounded),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: emailController, 
+            label: "Alamat Email", 
+            icon: Icons.alternate_email_rounded, 
+            type: TextInputType.emailAddress
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: passwordController,
+            label: "Kata Sandi",
+            icon: Icons.lock_outline_rounded,
+            isPassword: true,
+            obscure: _isObscure,
+            onToggle: () => setState(() => _isObscure = !_isObscure),
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: confirmPasswordController,
+            label: "Konfirmasi Sandi",
+            icon: Icons.verified_user_outlined,
+            isPassword: true,
+            obscure: _isObscureConfirm,
+            onToggle: () => setState(() => _isObscureConfirm = !_isObscureConfirm),
+          ),
+          const SizedBox(height: 35),
+          
+          // TOMBOL DAFTAR DENGAN GRADIENT PREMIUM
+          Container(
+            width: double.infinity,
+            height: 58,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              gradient: LinearGradient(
+                colors: [dark, const Color(0xFF63422B)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: dark.withOpacity(0.4), 
+                  blurRadius: 15, 
+                  offset: const Offset(0, 8)
+                ),
+              ],
+            ),
+            child: ElevatedButton(
+              onPressed: isLoading ? null : handleRegister,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              ),
+              child: isLoading
+                  ? const SizedBox(
+                      width: 24, 
+                      height: 24, 
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)
+                    )
+                  : Text(
+                      "DAFTAR SEKARANG", 
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold, 
+                        color: Colors.white, 
+                        letterSpacing: 1.2,
+                        fontSize: 15
+                      )
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool isPassword = false,
+    bool obscure = false,
+    VoidCallback? onToggle,
+    TextInputType type = TextInputType.text,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: isPassword ? obscure : false,
+      keyboardType: type,
+      style: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.grey, fontSize: 13),
+        prefixIcon: Icon(icon, color: const Color(0xFFD4A373), size: 22),
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: Colors.grey, size: 20), 
+                onPressed: onToggle
+              )
+            : null,
+        filled: true,
+        fillColor: Colors.grey[50],
+        contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18), 
+          borderSide: BorderSide(color: Colors.grey[200]!)
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18), 
+          borderSide: const BorderSide(color: Color(0xFFD4A373), width: 1.5)
         ),
       ),
     );
