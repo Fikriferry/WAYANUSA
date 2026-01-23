@@ -68,12 +68,6 @@ flutter_launcher_icons:
   adaptive_icon_background: "#FDFBF7" # Sesuaikan dengan warna background Wayanusa kamu
   adaptive_icon_foreground: "assets/app_icon.png"
 
-flutter_native_splash:
-  color: "#FDFBF7" # Warna krem background Wayanusa
-  image: assets/welcome.png # Logo Gunungan kamu
-  android_12:
-    image: assets/welcome.png
-    color: "#FDFBF7"
   web: false
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -125,3 +119,10 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_native_splash:
+  color: "#FDFBF7" # Warna krem background Wayanusa
+  image: assets/welcome.png # Logo Gunungan kamu
+  android_12:
+    image: assets/welcome.png
+    color: "#FDFBF7"

@@ -13,20 +13,20 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _checkAuth();
+    _navigateToNext();
   }
 
-  // Logika Cerdas: Cek apakah user sudah login atau belum
-  Future<void> _checkAuth() async {
-    // Beri jeda 3 detik agar user bisa menikmati logo Wayanusa
+  Future<void> _navigateToNext() async {
+    // Memberikan jeda 3 detik agar user bisa melihat logo
     await Future.delayed(const Duration(seconds: 3));
 
+    // Ambil token dari ApiService
     final token = await ApiService.getToken();
 
     if (!mounted) return;
 
     if (token != null) {
-      // Jika ada token, langsung ke Homepage
+      // Jika token ada, lanjut ke Homepage
       Navigator.pushReplacementNamed(context, '/home');
     } else {
       // Jika tidak ada, ke Welcome Screen
@@ -37,47 +37,35 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFBF7), // Cream Bg Wayanusa
+      backgroundColor: const Color(0xFFFDFBF7), // Sesuaikan dengan warna tema kamu
       body: Center(
-        child: TweenAnimationBuilder(
-          duration: const Duration(milliseconds: 1500),
-          tween: Tween<double>(begin: 0, end: 1),
-          builder: (context, double value, child) {
-            return Opacity(
-              opacity: value,
-              child: Transform.scale(
-                scale: 0.8 + (0.2 * value),
-                child: child,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Logo Gunungan
+            Image.asset('assets/welcome.png', width: 180),
+            const SizedBox(height: 24),
+            // Nama Aplikasi
+            Text(
+              "WAYANUSA",
+              style: GoogleFonts.cinzel(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 6,
+                color: const Color(0xFF4B3425),
               ),
-            );
-          },
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Logo Utama
-              Image.asset('assets/welcome.png', width: 200),
-              const SizedBox(height: 20),
-              // Nama Aplikasi dengan font elegan
-              Text(
-                "WAYANUSA",
-                style: GoogleFonts.cinzel(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 8,
-                  color: const Color(0xFF4B3425),
-                ),
+            ),
+            const SizedBox(height: 20),
+            // Indikator loading yang minimalis
+            const SizedBox(
+              width: 30,
+              height: 30,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD4A373)),
               ),
-              const SizedBox(height: 10),
-              // Loading Indicator tipis
-              const SizedBox(
-                width: 40,
-                child: LinearProgressIndicator(
-                  backgroundColor: Color(0xFFEEEEEE),
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD4A373)),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
