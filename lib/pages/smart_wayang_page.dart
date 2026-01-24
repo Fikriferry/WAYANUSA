@@ -6,7 +6,7 @@ class SmartWayangPage extends StatelessWidget {
 
   // Ganti URL ini dengan alamat website Flask kamu yang bisa diakses
   // Jika deploy, pakai domain asli. Jika lokal, pastikan HP & Laptop satu WiFi.
-  final String _websiteUrl = 'http://192.168.1.17:8000/smart-wayang';
+  final String _websiteUrl = 'https://monoclinic-superboldly-tobi.ngrok-free.dev/smart-wayang';
 
   Future<void> _launchURL(BuildContext context) async {
     final Uri url = Uri.parse(_websiteUrl);
