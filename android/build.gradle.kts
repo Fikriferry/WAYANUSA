@@ -1,3 +1,16 @@
+// --- TAMBAHKAN BAGIAN INI DI PALING ATAS ---
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        // Ini adalah "kabel" penghubung ke Google Services
+        classpath("com.google.gms:google-services:4.4.2")
+    }
+}
+// -------------------------------------------
+
 allprojects {
     repositories {
         google()

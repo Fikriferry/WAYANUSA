@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "624921347937",
-    "project_id": "wayanusa-mobile",
-    "storage_bucket": "wayanusa-mobile.firebasestorage.app"
+    "project_number": "152243540739",
+    "project_id": "wayanusa-567e0",
+    "storage_bucket": "wayanusa-567e0.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:624921347937:android:f91951f6cea872041d6720",
+        "mobilesdk_app_id": "1:152243540739:android:9612180808d2aef9844f36",
         "android_client_info": {
           "package_name": "com.wayanusa.mobile"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDnw_uhADgA5T2f8AzTiUAyT-t-OFt6WyM"
+          "current_key": "AIzaSyA_5fkv7Z4IZCmFx1obL6X5C7n2qT7LUjI"
         }
       ],
       "services": {

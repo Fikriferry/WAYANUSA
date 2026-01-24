@@ -1,49 +1,74 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cached_network_image/cached_network_image.dart'; // Wajib install ini di pubspec.yaml
+import 'dart:math';
 import '../models/wayang_game.dart';
 import '../services/api_service.dart';
 import '../services/image_helper.dart';
 
 // ===============================================================
-// 1. CONTROLLER (Penyimpan Data & Posisi yang Ringan)
+// 1. CONTROLLER (State Management & Data)
 // ===============================================================
 class WayangController {
   final int id;
   final String nama;
+
+  // URL Gambar
   final String? badanUrl;
   final String? tgnKananAtas;
   final String? tgnKananBawah;
   final String? tgnKiriAtas;
   final String? tgnKiriBawah;
 
-  // State Posisi (Notifier) - Biar gak perlu SetState satu layar
+  // Koordinat Siku Spesifik (Dari Code Baru)
+  final Offset sikuKiriOffset; // Ex: -35.0, 95.0
+  final Offset sikuKananOffset; // Ex: -05.0, 25.0
+
+  // State Posisi Utama (Drag Badan)
   final ValueNotifier<Offset> position;
-  final ValueNotifier<double> rotKiriAtas = ValueNotifier(0.5);
-  final ValueNotifier<double> rotKiriBawah = ValueNotifier(0.8);
-  final ValueNotifier<double> rotKananAtas = ValueNotifier(0.4);
-  final ValueNotifier<double> rotKananBawah = ValueNotifier(0.3);
+
+  // State Sudut (Notifier agar performa tinggi tanpa setState layar penuh)
+  final ValueNotifier<double> angleKiriAtas;
+  final ValueNotifier<double> angleKiriBawahRel; // Sudut Relatif
+  final ValueNotifier<double> angleKananAtas;
+  final ValueNotifier<double> angleKananBawahRel; // Sudut Relatif
 
   WayangController({
     required this.id,
     required this.nama,
     this.badanUrl,
-    this.tgnKananAtas, this.tgnKananBawah,
-    this.tgnKiriAtas, this.tgnKiriBawah,
+    this.tgnKananAtas,
+    this.tgnKananBawah,
+    this.tgnKiriAtas,
+    this.tgnKiriBawah,
     required Offset startPos,
-  }) : position = ValueNotifier(startPos);
-  
+    // Default value offset siku jika null
+    this.sikuKiriOffset = const Offset(
+      -35.0,
+      95.0,
+    ), // X: Geser Kiri (-) atau Kanan (+)
+    this.sikuKananOffset = const Offset(
+      77.0,
+      80.0,
+    ), // Y: Geser Atas (makin kecil) atau Bawah (makin besar)
+    double startAngleKiri = 0.5,
+    double startAngleKanan = -0.5,
+  }) : position = ValueNotifier(startPos),
+       angleKiriAtas = ValueNotifier(startAngleKiri),
+       angleKiriBawahRel = ValueNotifier(0.4),
+       angleKananAtas = ValueNotifier(startAngleKanan),
+       angleKananBawahRel = ValueNotifier(-0.4);
+
   void dispose() {
     position.dispose();
-    rotKiriAtas.dispose();
-    rotKiriBawah.dispose();
-    rotKananAtas.dispose();
-    rotKananBawah.dispose();
+    angleKiriAtas.dispose();
+    angleKiriBawahRel.dispose();
+    angleKananAtas.dispose();
+    angleKananBawahRel.dispose();
   }
 }
 
 // ===============================================================
-// 2. HALAMAN UTAMA (LOGIKA GAME)
+// 2. PAGE UTAMA (Hanya Mengurus Logic Game)
 // ===============================================================
 class SimulasiDalangPage extends StatefulWidget {
   const SimulasiDalangPage({super.key});
@@ -53,7 +78,8 @@ class SimulasiDalangPage extends StatefulWidget {
 }
 
 class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
-  final List<WayangController> activeWayang = [];
+  final List<WayangController> activeWayang =
+      []; // List Controller, bukan Map lagi
   List<WayangGame> libraryWayang = [];
   bool isLoading = true;
   bool isOverDeleteZone = false;
@@ -73,21 +99,27 @@ class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
   void dispose() {
     for (var w in activeWayang) w.dispose();
     SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp, 
-      DeviceOrientation.portraitDown
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
     ]);
     super.dispose();
   }
 
   Future<void> _loadData() async {
     try {
-      final data = await ApiService.getWayangGameList();
-      if(mounted) setState(() { libraryWayang = data; isLoading = false; });
+      final data =
+          await ApiService.getWayangGameList(); // Sesuaikan nama fungsi API Anda
+      if (mounted)
+        setState(() {
+          libraryWayang = data;
+          isLoading = false;
+        });
     } catch (_) {
-      if(mounted) setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
+  // Fungsi: Bawa wayang yang disentuh ke layer paling depan
   void _bringToFront(int index) {
     if (index == activeWayang.length - 1) return;
     setState(() {
@@ -99,23 +131,22 @@ class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    // Skala responsif (HP Kecil vs Tablet)
-    final scaleFactor = size.height / 400.0; 
 
     return Scaffold(
-      backgroundColor: const Color(0xffFEFBF5), // Warna background original
+      backgroundColor: const Color(0xffFEFBF5),
       body: Stack(
         children: [
-          // LAYER 1: BACKGROUND PANGGUNG
+          // BACKGROUND
           Positioned.fill(
             child: Image.asset(
               "assets/background_panggung.png",
               fit: BoxFit.cover,
-              errorBuilder: (_,__,___) => Container(color: Colors.brown),
+              errorBuilder: (_, __, ___) =>
+                  Container(color: const Color(0xffFEFBF5)),
             ),
           ),
 
-          // LAYER 2: WAYANG (Dirender ulang hanya saat bergerak)
+          // WAYANG LIST (Looping Controller)
           ...activeWayang.asMap().entries.map((entry) {
             final index = entry.key;
             final controller = entry.value;
@@ -129,11 +160,13 @@ class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
                   child: GestureDetector(
                     onPanStart: (_) => _bringToFront(index),
                     onPanUpdate: (d) {
-                      controller.position.value += d.delta; 
-                      
+                      // Update Posisi
+                      controller.position.value += d.delta;
+
                       // Cek Delete Zone
                       final zoneY = size.height - deleteZoneSize;
-                      final isInZone = pos.dx < deleteZoneSize && pos.dy > zoneY;
+                      final isInZone =
+                          pos.dx < deleteZoneSize && (pos.dy + 120) > zoneY;
                       if (isOverDeleteZone != isInZone) {
                         setState(() => isOverDeleteZone = isInZone);
                       }
@@ -147,189 +180,320 @@ class _SimulasiDalangPageState extends State<SimulasiDalangPage> {
                         });
                       }
                     },
-                    // RepaintBoundary: Isolasi render wayang biar smooth
-                    child: RepaintBoundary(
-                      child: Transform.scale(
-                        scale: scaleFactor, // Responsif size
-                        alignment: Alignment.topLeft,
-                        child: WayangActor(ctrl: controller),
-                      ),
-                    ),
+                    // MENGGUNAKAN CLASS WAYANG ACTOR (Code Lama tapi Logic Baru)
+                    child: WayangActor(ctrl: controller),
                   ),
                 );
               },
             );
           }),
 
-          // LAYER 3: UI DELETE ZONE
-          Positioned(
-            left: 20, bottom: 20,
-            child: AnimatedScale(
-              scale: isOverDeleteZone ? 1.2 : 1.0,
-              duration: const Duration(milliseconds: 200),
-              child: CircleAvatar(
-                radius: deleteZoneSize / 2,
-                backgroundColor: isOverDeleteZone ? Colors.red : Colors.red.withOpacity(0.4),
-                child: const Icon(Icons.delete, color: Colors.white),
-              ),
-            ),
-          ),
-
-          // LAYER 4: TOMBOL TAMBAH
-          Positioned(
-            right: 20, bottom: 20,
-            child: ElevatedButton.icon(
-              onPressed: () => _showPicker(context),
-              icon: const Icon(Icons.theater_comedy),
-              label: const Text("Tambah Wayang"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xffF3E7D3),
-                foregroundColor: Colors.brown,
-              ),
-            ),
-          ),
-          
-          // LAYER 5: TOMBOL BACK
-          Positioned(
-             top: 20, left: 20,
-             child: CircleAvatar(
-               backgroundColor: Colors.white54,
-               child: IconButton(
-                 icon: const Icon(Icons.arrow_back, color: Colors.black),
-                 onPressed: () => Navigator.pop(context),
-               ),
-             ),
-          ),
+          // TOMBOL & UI LAINNYA
+          _buildDeleteZone(),
+          _buildAddButton(context),
+          _buildBackButton(context),
         ],
+      ),
+    );
+  }
+
+  // --- UI COMPONENTS (Biar Rapi) ---
+  Widget _buildDeleteZone() {
+    return Positioned(
+      left: 20,
+      bottom: 20,
+      child: AnimatedScale(
+        scale: isOverDeleteZone ? 1.2 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        child: CircleAvatar(
+          radius: deleteZoneSize / 2,
+          backgroundColor: isOverDeleteZone
+              ? Colors.red
+              : Colors.red.withOpacity(0.4),
+          child: const Icon(Icons.delete, color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddButton(BuildContext context) {
+    return Positioned(
+      right: 20,
+      bottom: 20,
+      child: ElevatedButton.icon(
+        onPressed: () => _showPicker(context),
+        icon: const Icon(Icons.theater_comedy),
+        label: const Text("Tambah Wayang"),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xffF3E7D3),
+          foregroundColor: Colors.brown,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackButton(BuildContext context) {
+    return Positioned(
+      top: 20,
+      left: 20,
+      child: CircleAvatar(
+        backgroundColor: Colors.white54,
+        child: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
     );
   }
 
   void _showPicker(BuildContext context) {
     showModalBottomSheet(
-      context: context, backgroundColor: Colors.transparent,
+      context: context,
+      backgroundColor: Colors.transparent,
       builder: (_) => Container(
         height: 180,
         decoration: const BoxDecoration(
-          color: Colors.white, 
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: isLoading 
-          ? const Center(child: CircularProgressIndicator()) 
-          : ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.all(15),
-              itemCount: libraryWayang.length,
-              itemBuilder: (_, i) {
-                final w = libraryWayang[i];
-                return GestureDetector(
-                  onTap: () {
-                    // Posisi awal muncul di tengah layar
-                    final startPos = Offset(MediaQuery.of(context).size.width/2 - 130, 100);
-                    setState(() {
-                      activeWayang.add(WayangController(
-                        id: w.id, nama: w.nama,
-                        badanUrl: w.badan != null ? ImageHelper.resolve(w.badan!) : null,
-                        tgnKananAtas: w.tanganKananAtas != null ? ImageHelper.resolve(w.tanganKananAtas!) : null,
-                        tgnKananBawah: w.tanganKananBawah != null ? ImageHelper.resolve(w.tanganKananBawah!) : null,
-                        tgnKiriAtas: w.tanganKiriAtas != null ? ImageHelper.resolve(w.tanganKiriAtas!) : null,
-                        tgnKiriBawah: w.tanganKiriBawah != null ? ImageHelper.resolve(w.tanganKiriBawah!) : null,
-                        startPos: startPos,
-                      ));
-                    });
-                    Navigator.pop(context);
-                  },
-                  child: Container(
-                    width: 100, margin: const EdgeInsets.only(right: 10),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: CachedNetworkImage(
-                            imageUrl: ImageHelper.resolve(w.thumbnail ?? ''), 
-                            errorWidget: (_,__,___)=>const Icon(Icons.broken_image)
-                          )
-                        ),
-                        Text(w.nama, maxLines: 1, overflow: TextOverflow.ellipsis)
-                      ],
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.all(15),
+                itemCount: libraryWayang.length,
+                itemBuilder: (_, i) {
+                  final w = libraryWayang[i];
+                  return GestureDetector(
+                    onTap: () {
+                      final startPos = Offset(
+                        MediaQuery.of(context).size.width / 2 - 130,
+                        100,
+                      );
+                      setState(() {
+                        activeWayang.add(
+                          WayangController(
+                            id: w.id,
+                            nama: w.nama,
+                            badanUrl: w.badan != null
+                                ? ImageHelper.resolve(w.badan!)
+                                : null,
+                            tgnKananAtas: w.tanganKananAtas != null
+                                ? ImageHelper.resolve(w.tanganKananAtas!)
+                                : null,
+                            tgnKananBawah: w.tanganKananBawah != null
+                                ? ImageHelper.resolve(w.tanganKananBawah!)
+                                : null,
+                            tgnKiriAtas: w.tanganKiriAtas != null
+                                ? ImageHelper.resolve(w.tanganKiriAtas!)
+                                : null,
+                            tgnKiriBawah: w.tanganKiriBawah != null
+                                ? ImageHelper.resolve(w.tanganKiriBawah!)
+                                : null,
+                            startPos: startPos,
+                            // Anda bisa menambahkan data offset siku dari API jika ada fieldnya
+                          ),
+                        );
+                      });
+                      Navigator.pop(context);
+                    },
+                    child: Container(
+                      width: 100,
+                      margin: const EdgeInsets.only(right: 10),
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: Image.network(
+                              ImageHelper.resolve(w.thumbnail ?? ''),
+                              errorBuilder: (_, __, ___) =>
+                                  const Icon(Icons.broken_image),
+                            ),
+                          ),
+                          Text(
+                            w.nama,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-      )
+                  );
+                },
+              ),
+      ),
     );
   }
 }
 
 // ===============================================================
-// 3. WIDGET RIGGING (KOORDINAT DIKEMBALIKAN KE KODE ASLI)
+// 3. WAYANG ACTOR (Ini adalah _WayangStack yang dipindah ke atas)
 // ===============================================================
 class WayangActor extends StatelessWidget {
   final WayangController ctrl;
+
   const WayangActor({super.key, required this.ctrl});
+
+  // Helper Matematika Rotasi (Dari Code B)
+  Offset _rotateOffset(Offset original, double angle) {
+    final cosA = cos(angle);
+    final sinA = sin(angle);
+    final x = original.dx * cosA - original.dy * sinA;
+    final y = original.dx * sinA + original.dy * cosA;
+    return Offset(x, y);
+  }
 
   @override
   Widget build(BuildContext context) {
-    // 🔥 KOORDINAT ASLI DARI KODE ANDA
     const double badanLeft = 90;
     const double badanTop = 40;
 
+    // --- LOGIKA POSISI SIKU (Dari Code B) ---
+    // Posisi Bahu relatif terhadap badan
+    final Offset bahuKiri = const Offset(badanLeft + 20, badanTop + 70);
+    final Offset bahuKanan = const Offset(badanLeft + 150, badanTop + 45);
+
     return SizedBox(
-      width: 260, height: 320,
+      width: 420,
+      height: 420,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // === BADAN ===
+          // 1. BADAN
           if (ctrl.badanUrl != null)
-             Positioned(
-               left: badanLeft, 
-               top: badanTop, 
-               child: CachedNetworkImage(imageUrl: ctrl.badanUrl!, height: 260)
-             ),
-          
-          // === LENGAN KIRI (Belakang) ===
-          if (ctrl.tgnKiriAtas != null)
-            _Limb(
-              url: ctrl.tgnKiriAtas,
-              angleNotifier: ctrl.rotKiriAtas,
-              // Koordinat Asli: left: badanLeft + 20, top: badanTop + 70
-              left: badanLeft + 20, 
-              top: badanTop + 70, 
-              // Pivot Asli: 25, 5
-              pivotX: 25.0, pivotY: 5.0,
-              
-              child: ctrl.tgnKiriBawah != null ? _Limb(
-                url: ctrl.tgnKiriBawah,
-                angleNotifier: ctrl.rotKiriBawah,
-                // Koordinat Asli: left: -35, top: 97
-                left: -35, top: 97, 
-                // Pivot Asli: 52, 5
-                pivotX: 52.0, pivotY: 5.0,
-                hasStick: true, inverse: false,
-              ) : null,
+            Positioned(
+              left: badanLeft,
+              top: badanTop,
+              child: Image.network(ctrl.badanUrl!, height: 260),
             ),
 
-          // === LENGAN KANAN (Depan) ===
+          // 2. LENGAN KIRI (Belakang Badan)
+          // Kita butuh ValueListenableBuilder untuk update real-time tanpa redraw seluruh widget
+          if (ctrl.tgnKiriAtas != null)
+            ValueListenableBuilder<double>(
+              valueListenable: ctrl.angleKiriAtas,
+              builder: (ctx, angleAtas, _) {
+                // Hitung posisi siku Kiri secara dinamis berdasarkan sudut bahu
+                final Offset rotatedSiku = _rotateOffset(
+                  Offset(0, ctrl.sikuKiriOffset.dy),
+                  angleAtas,
+                );
+                final Offset sikuKiriPos =
+                    bahuKiri + rotatedSiku + Offset(ctrl.sikuKiriOffset.dx, 0);
+
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Lengan Atas Kiri
+                    _RotatedLimb(
+                      left: bahuKiri.dx,
+                      top: bahuKiri.dy,
+                      pivotX: 25,
+                      pivotY: 5,
+                      angle: angleAtas,
+                      height: 110,
+                      imageUrl: ctrl.tgnKiriAtas!,
+                      onAngleChange: (v) => ctrl.angleKiriAtas.value = v,
+                      minAngle: -1.2,
+                      maxAngle: 0.4,
+                      sensitivity: 0.015,
+                    ),
+
+                    // Lengan Bawah Kiri (Menempel di Siku yang bergerak)
+                    if (ctrl.tgnKiriBawah != null)
+                      ValueListenableBuilder<double>(
+                        valueListenable: ctrl.angleKiriBawahRel,
+                        builder: (ctx, angleRel, _) {
+                          return _RotatedLimb(
+                            left: sikuKiriPos.dx,
+                            top: sikuKiriPos.dy,
+                            pivotX: 55,
+                            pivotY: 5,
+                            angle: angleAtas + angleRel, // Sudut Absolut
+                            height: 100,
+                            imageUrl: ctrl.tgnKiriBawah!,
+                            // Logic update sudut relatif
+                            onAngleChange: (v) {
+                              ctrl.angleKiriBawahRel.value = (v - angleAtas)
+                                  .clamp(-1.2, 1.2);
+                            },
+                            minAngle: -1.2,
+                            maxAngle: 1.2,
+                            sensitivity: 0.02,
+                            // Debug color: Colors.blue
+                          );
+                        },
+                      ),
+                  ],
+                );
+              },
+            ),
+
+          // 3. LENGAN KANAN (Depan Badan)
           if (ctrl.tgnKananAtas != null)
-            _Limb(
-              url: ctrl.tgnKananAtas,
-              angleNotifier: ctrl.rotKananAtas,
-              // Koordinat Asli: left: badanLeft + 150, top: badanTop + 45
-              left: badanLeft + 150, 
-              top: badanTop + 45, 
-              // Pivot Asli: 10, 10
-              pivotX: 10.0, pivotY: 10.0,
-              inverse: true, // Gerakan dibalik
-              
-              child: ctrl.tgnKananBawah != null ? _Limb(
-                url: ctrl.tgnKananBawah,
-                angleNotifier: ctrl.rotKananBawah,
-                // Koordinat Asli: left: 30, top: 65
-                left: 30, top: 65, 
-                // Pivot Asli: 93, 12
-                pivotX: 93.0, pivotY: 12.0,
-                hasStick: true, inverse: true, // Gerakan dibalik
-              ) : null,
+            ValueListenableBuilder<double>(
+              valueListenable: ctrl.angleKananAtas,
+              builder: (ctx, angleAtas, _) {
+                // Hitung posisi siku Kanan dinamis
+                final Offset rotatedSiku = _rotateOffset(
+                  ctrl.sikuKananOffset,
+                  angleAtas,
+                );
+                final Offset sikuKananPos = bahuKanan + rotatedSiku;
+
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Lengan Atas Kanan
+                    _RotatedLimb(
+                      left: bahuKanan.dx,
+                      top: bahuKanan.dy,
+                      pivotX: 10,
+                      pivotY: 10,
+                      angle: angleAtas,
+                      height: 85,
+                      imageUrl: ctrl.tgnKananAtas!,
+                      invertDrag:
+                          true, // Gerakan mouse terbalik utk tangan kanan
+                      onAngleChange: (v) => ctrl.angleKananAtas.value = v,
+                      minAngle: -0.4,
+                      maxAngle: 1.2,
+                      sensitivity: 0.015,
+                    ),
+
+                    // Lengan Bawah Kanan
+                    if (ctrl.tgnKananBawah != null)
+                      ValueListenableBuilder<double>(
+                        valueListenable: ctrl.angleKananBawahRel,
+                        builder: (ctx, angleRel, _) {
+                          // KUNCI PERBAIKAN:
+                          // Karena Engsel (Gelang) ada di KIRI gambar, pX harus KECIL.
+                          // Kalau pX = 100, dia akan muter di tangan (salah).
+                          final double pX = 100.0;
+                          final double pY = 10.0;
+
+                          return _RotatedLimb(
+                            // Rumus: Tempelkan titik pX, pY gambar ke Siku
+                            left: sikuKananPos.dx - pX,
+                            top: sikuKananPos.dy - pY,
+
+                            pivotX:
+                                pX, // Titik putar di gelang (18px dari kiri)
+                            pivotY: pY,
+
+                            angle: angleAtas + angleRel,
+                            height: 80,
+                            imageUrl: ctrl.tgnKananBawah!,
+                            invertDrag: true,
+                            onAngleChange: (v) {
+                              ctrl.angleKananBawahRel.value = (v - angleAtas)
+                                  .clamp(-1.2, 1.2);
+                            },
+                          );
+                        },
+                      ),
+                  ],
+                );
+              },
             ),
         ],
       ),
@@ -338,78 +502,68 @@ class WayangActor extends StatelessWidget {
 }
 
 // ===============================================================
-// 4. LIMB CONTROL (LOGIKA ROTASI)
+// 4. LIMB WIDGET (Widget Lengan yang bisa diputar)
 // ===============================================================
-class _Limb extends StatelessWidget {
-  final String? url;
-  final ValueNotifier<double> angleNotifier;
-  final double left, top, pivotX, pivotY;
-  final Widget? child;
-  final bool hasStick, inverse;
+class _RotatedLimb extends StatefulWidget {
+  final double left, top, pivotX, pivotY, angle, height;
+  final String imageUrl;
+  final double sensitivity, minAngle, maxAngle;
+  final bool invertDrag;
+  final Function(double) onAngleChange;
 
-  const _Limb({
-    required this.url, required this.angleNotifier,
-    required this.left, required this.top,
-    required this.pivotX, required this.pivotY,
-    this.child, this.hasStick = false, this.inverse = false,
+  const _RotatedLimb({
+    required this.left,
+    required this.top,
+    required this.pivotX,
+    required this.pivotY,
+    required this.angle,
+    required this.height,
+    required this.imageUrl,
+    required this.onAngleChange,
+    this.sensitivity = 0.01,
+    this.minAngle = -2.0,
+    this.maxAngle = 2.0,
+    this.invertDrag = false,
   });
 
   @override
-  Widget build(BuildContext context) {
-    if (url == null) return const SizedBox();
-
-    return ValueListenableBuilder<double>(
-      valueListenable: angleNotifier,
-      builder: (context, angle, _) {
-        return Positioned(
-          left: left, top: top,
-          child: Transform(
-            transform: Matrix4.identity()
-              ..translate(pivotX, pivotY) // Titik putar
-              ..rotateZ(angle)
-              ..translate(-pivotX, -pivotY), // Kembalikan posisi
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                CachedNetworkImage(imageUrl: url!, height: (hasStick && inverse) ? 80 : (inverse ? 85 : 100)), // Tinggi disesuaikan dg kode asli
-                
-                if (child != null) child!,
-                
-                // Stick Transparan untuk Area Sentuh
-                if (hasStick) _StickHandle(
-                  inverse: inverse, 
-                  onDrag: (dy) {
-                    // Logika Rotasi: dy adalah perubahan vertikal
-                    final diff = inverse ? -dy : dy; 
-                    angleNotifier.value = (angle + diff * 0.02).clamp(-1.6, 1.6);
-                  }
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
+  State<_RotatedLimb> createState() => _RotatedLimbState();
 }
 
-class _StickHandle extends StatelessWidget {
-  final bool inverse;
-  final Function(double) onDrag;
-  const _StickHandle({required this.inverse, required this.onDrag});
+class _RotatedLimbState extends State<_RotatedLimb> {
+  double _startDy = 0;
+  double _startAngle = 0;
 
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      // Stick menjulur ke bawah untuk pegangan
-      bottom: -40,
-      left: inverse ? 10 : null, right: inverse ? null : 10,
-      child: GestureDetector(
-        onPanUpdate: (d) => onDrag(d.delta.dy),
-        child: Container(
-          width: 50, height: 100, // Hitbox besar biar gampang kesentuh
-          color: Colors.transparent, // Transparan agar tidak menutupi gambar
-          // Debugging: Ganti warna transparent jadi Colors.red.withOpacity(0.3) kalau mau lihat area sentuh
+      left: widget.left,
+      top: widget.top,
+      child: Transform(
+        transformHitTests: true,
+        transform: Matrix4.identity()
+          ..translate(widget.pivotX, widget.pivotY)
+          ..rotateZ(widget.angle)
+          ..translate(-widget.pivotX, -widget.pivotY),
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onPanStart: (d) {
+            _startDy = d.globalPosition.dy;
+            _startAngle = widget.angle;
+          },
+          onPanUpdate: (d) {
+            final diff = widget.invertDrag
+                ? _startDy - d.globalPosition.dy
+                : d.globalPosition.dy - _startDy;
+
+            final next = (_startAngle + diff * widget.sensitivity).clamp(
+              widget.minAngle,
+              widget.maxAngle,
+            );
+
+            widget.onAngleChange(next);
+          },
+          child: Image.network(widget.imageUrl, height: widget.height),
         ),
       ),
     );
