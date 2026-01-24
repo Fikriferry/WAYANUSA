@@ -13,15 +13,19 @@ class DetailProfilePage extends StatefulWidget {
 class _DetailProfilePageState extends State<DetailProfilePage> {
   bool _isLoading = true;
   bool _isUpdating = false;
-  bool _obscureOld = true;
+  
+  // Visibility state
   bool _obscureNew = true;
+  
   XFile? _imageFile;
   String? _currentImageUrl;
 
-  final _oldPasswordController = TextEditingController();
+  // Controllers
+  final _oldPasswordController = TextEditingController(); // Diisi lewat Dialog nanti
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _passwordController = TextEditingController(); // Ini untuk Password Baru
+  
   final ImagePicker _picker = ImagePicker();
 
   final Color primaryColor = const Color(0xFFD4A373);
@@ -31,6 +35,15 @@ class _DetailProfilePageState extends State<DetailProfilePage> {
   void initState() {
     super.initState();
     _loadProfile();
+  }
+
+  @override
+  void dispose() {
+    _oldPasswordController.dispose();
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadProfile() async {
@@ -72,31 +85,125 @@ class _DetailProfilePageState extends State<DetailProfilePage> {
     );
   }
 
-  Future<void> _saveProfile() async {
+  // 1. Fungsi ini dipanggil saat tombol Simpan di klik
+  void _onSaveButtonPressed() {
+    // Validasi dasar dulu
+    if (_nameController.text.trim().isEmpty || _emailController.text.trim().isEmpty) {
+      _showSnackBar("Nama dan Email tidak boleh kosong", Colors.orange);
+      return;
+    }
+
+    // Tampilkan Dialog Password Lama
+    _showPasswordConfirmationDialog();
+  }
+
+  // 2. Dialog untuk meminta Password Lama
+  Future<void> _showPasswordConfirmationDialog() async {
+    _oldPasswordController.clear(); // Reset field dialog
+    bool obscureDialogPass = true; // State lokal untuk dialog
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder( // Butuh StatefulBuilder agar bisa toggle eye icon di dialog
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Text(
+                "Konfirmasi Perubahan",
+                style: TextStyle(color: secondaryColor, fontWeight: FontWeight.bold),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text("Demi keamanan, mohon masukkan password lama Anda untuk menyimpan perubahan."),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: _oldPasswordController,
+                    obscureText: obscureDialogPass,
+                    decoration: InputDecoration(
+                      labelText: "Password Lama",
+                      prefixIcon: Icon(Icons.vpn_key, color: primaryColor),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: primaryColor),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscureDialogPass ? Icons.visibility_off : Icons.visibility,
+                          color: Colors.grey,
+                        ),
+                        onPressed: () {
+                          setDialogState(() {
+                            obscureDialogPass = !obscureDialogPass;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Batal", style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (_oldPasswordController.text.isEmpty) {
+                      // Show toast/snackbar is tricky inside dialog, using simple return logic
+                      return; 
+                    }
+                    Navigator.pop(context); // Tutup dialog
+                    _executeSaveProfile(); // Lanjut ke proses API
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text("Konfirmasi", style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // 3. Proses API (Dijalankan setelah dialog dikonfirmasi)
+  Future<void> _executeSaveProfile() async {
     if (_oldPasswordController.text.isEmpty) {
-      _showSnackBar("Password lama wajib diisi untuk keamanan", Colors.orange);
+      _showSnackBar("Password lama wajib diisi!", Colors.red);
       return;
     }
 
     setState(() => _isUpdating = true);
-    bool success = await ApiService.updateProfile(
-      name: _nameController.text.trim(),
-      email: _emailController.text.trim(),
-      oldPassword: _oldPasswordController.text,
-      password: _passwordController.text.trim(),
-      imageFile: _imageFile,
-    );
 
-    if (mounted) {
-      setState(() => _isUpdating = false);
-      if (success) {
-        _showSnackBar("Profil berhasil diperbarui", Colors.green);
-        _oldPasswordController.clear();
-        _passwordController.clear();
-        _loadProfile();
-      } else {
-        _showSnackBar("Gagal! Password lama salah atau server error.", Colors.red);
+    try {
+      bool success = await ApiService.updateProfile(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        oldPassword: _oldPasswordController.text, // Ambil dari controller dialog tadi
+        password: _passwordController.text.trim(), // Password baru (opsional)
+        imageFile: _imageFile,
+      );
+
+      if (mounted) {
+        if (success) {
+          _showSnackBar("Profil berhasil diperbarui", Colors.green);
+          _oldPasswordController.clear();
+          _passwordController.clear();
+          _loadProfile(); // Reload data terbaru
+        } else {
+          _showSnackBar("Gagal! Password lama salah atau server error.", Colors.red);
+        }
       }
+    } catch (e) {
+      _showSnackBar("Terjadi kesalahan: $e", Colors.red);
+    } finally {
+      if (mounted) setState(() => _isUpdating = false);
     }
   }
 
@@ -138,15 +245,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> {
                           title: "Keamanan Akun",
                           icon: Icons.lock_outline,
                           children: [
-                            _buildTextField(
-                              controller: _oldPasswordController,
-                              label: "Password Saat Ini (Wajib)",
-                              icon: Icons.vpn_key_outlined,
-                              isPassword: true,
-                              obscureText: _obscureOld,
-                              onToggle: () => setState(() => _obscureOld = !_obscureOld),
-                            ),
-                            const SizedBox(height: 16),
+                            // NOTE: Password Lama dihapus dari sini
                             _buildTextField(
                               controller: _passwordController,
                               label: "Password Baru (Opsional)",
@@ -154,6 +253,11 @@ class _DetailProfilePageState extends State<DetailProfilePage> {
                               isPassword: true,
                               obscureText: _obscureNew,
                               onToggle: () => setState(() => _obscureNew = !_obscureNew),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              "* Kosongkan jika tidak ingin mengganti password",
+                              style: TextStyle(color: Colors.grey, fontSize: 12, fontStyle: FontStyle.italic),
                             ),
                           ],
                         ),
@@ -168,6 +272,8 @@ class _DetailProfilePageState extends State<DetailProfilePage> {
             ),
     );
   }
+
+  // --- Widget Builders (Header, SectionCard, TextField sama seperti sebelumnya) ---
 
   Widget _buildHeader() {
     return Container(
@@ -279,7 +385,8 @@ class _DetailProfilePageState extends State<DetailProfilePage> {
       width: double.infinity,
       height: 55,
       child: ElevatedButton(
-        onPressed: _isUpdating ? null : _saveProfile,
+        // Di sini kita panggil _onSaveButtonPressed, BUKAN _saveProfile langsung
+        onPressed: _isUpdating ? null : _onSaveButtonPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,

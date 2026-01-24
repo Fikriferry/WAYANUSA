@@ -1,6 +1,6 @@
 class ImageHelper {
   // ⚠️ GANTI DENGAN URL NGROK TERBARU KAMU
-  static const String baseUrl = "http://192.168.1.76:8000/static/images/wayang";
+  static const String baseUrl = "https://monoclinic-superboldly-tobi.ngrok-free.dev/static/images/wayang";
 
   static String resolve(String path) {
     if (path.isEmpty) return "https://via.placeholder.com/150";

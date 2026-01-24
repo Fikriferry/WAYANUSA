@@ -11,7 +11,7 @@ import 'google_auth.dart';
 class ApiService {
   // ================= BASE URL =================
   static const String baseUrl =
-      "http://192.168.1.76:8000/api";
+      "https://monoclinic-superboldly-tobi.ngrok-free.dev/api";
 
   // ================= GET TOKEN =================
   static Future<String?> getToken() async {
