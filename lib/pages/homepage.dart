@@ -3,16 +3,25 @@ import 'package:carousel_slider/carousel_slider.dart';
 import '../services/api_service.dart';
 import 'article_detail_page.dart'; // Import halaman detail
 
+// class HomeWayangPage extends StatefulWidget {
+//   const HomeWayangPage({super.key});
 class HomeWayangPage extends StatefulWidget {
-  const HomeWayangPage({super.key});
+  final bool disableApi;
+
+  const HomeWayangPage({super.key, this.disableApi = false});
 
   @override
   State<HomeWayangPage> createState() => _HomeWayangPageState();
 }
 
-class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProviderStateMixin {
+//   @override
+//   State<HomeWayangPage> createState() => _HomeWayangPageState();
+// }
+
+class _HomeWayangPageState extends State<HomeWayangPage>
+    with SingleTickerProviderStateMixin {
   String namaUser = "Sobat Wayang";
-  
+
   // DATA ARTIKEL DINAMIS
   List<dynamic> articles = []; // List kosong awal
   bool isLoadingArticles = true;
@@ -21,22 +30,44 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
   late Animation<double> _botScaleAnim;
 
   final List<String> imgList = [
-    'assets/banner.jpg', 
-    'assets/MencariDalang.jpeg', 
-    'assets/banner1.png', 
+    'assets/banner.jpg',
+    'assets/MencariDalang.jpeg',
+    'assets/banner1.png',
     'assets/PertunjukanWayang.jpeg',
   ];
 
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   loadUser();
+  //   fetchArticles(); // Panggil fungsi fetch artikel
+
+  //   _botAnimController = AnimationController(
+  //     vsync: this,
+  //     duration: const Duration(seconds: 2),
+  //   )..repeat(reverse: true);
+  //   _botScaleAnim = Tween<double>(begin: 1.0, end: 1.1).animate(
+  //     CurvedAnimation(parent: _botAnimController, curve: Curves.easeInOut),
+  //   );
+  // }
   @override
   void initState() {
     super.initState();
-    loadUser();
-    fetchArticles(); // Panggil fungsi fetch artikel
+
+    if (!widget.disableApi) {
+      loadUser();
+      fetchArticles();
+    } else {
+      // MODE TEST
+      isLoadingArticles = false;
+      articles = [];
+    }
 
     _botAnimController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+
     _botScaleAnim = Tween<double>(begin: 1.0, end: 1.1).animate(
       CurvedAnimation(parent: _botAnimController, curve: Curves.easeInOut),
     );
@@ -121,44 +152,58 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
                         ),
                         // Tombol Lihat Semua
                         GestureDetector(
-                          onTap: () => Navigator.pushNamed(context, '/article_list'), // Route ke list lengkap
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/article_list',
+                          ), // Route ke list lengkap
                           child: Text(
                             "Lihat Semua",
-                            style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              color: primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 15),
-                  
+
                   // LIST ARTIKEL PREVIEW
                   isLoadingArticles
-                    ? const Center(child: CircularProgressIndicator(color: primaryColor))
-                    : articles.isEmpty
-                        ? const Padding(
-                            padding: EdgeInsets.all(20),
-                            child: Text("Belum ada artikel terbaru.", style: TextStyle(color: Colors.grey)),
-                          )
-                        : SizedBox(
-                            height: 120.0,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              itemCount: articles.length,
-                              itemBuilder: (context, index) {
-                                return Container(
-                                  width: MediaQuery.of(context).size.width * 0.8,
-                                  margin: const EdgeInsets.only(right: 15),
-                                  child: _buildArticleCard(context, articles[index]),
-                                );
-                              },
-                            ),
+                      ? const Center(
+                          child: CircularProgressIndicator(color: primaryColor),
+                        )
+                      : articles.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Text(
+                            "Belum ada artikel terbaru.",
+                            style: TextStyle(color: Colors.grey),
                           ),
+                        )
+                      : SizedBox(
+                          height: 120.0,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            itemCount: articles.length,
+                            itemBuilder: (context, index) {
+                              return Container(
+                                width: MediaQuery.of(context).size.width * 0.8,
+                                margin: const EdgeInsets.only(right: 15),
+                                child: _buildArticleCard(
+                                  context,
+                                  articles[index],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                 ],
               ),
             ),
-            
+
             // CHATBOT BUTTON (Tetap sama)
             Positioned(
               bottom: 25,
@@ -166,10 +211,17 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
               child: ScaleTransition(
                 scale: _botScaleAnim,
                 child: FloatingActionButton.extended(
+                  key: const Key('chatbot_fab'),
                   onPressed: () => Navigator.pushNamed(context, '/chatbot'),
                   backgroundColor: const Color(0xFF4B3425),
-                  icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
-                  label: const Text("Tanya ChatPot", style: TextStyle(color: Colors.white)),
+                  icon: const Icon(
+                    Icons.chat_bubble_outline,
+                    color: Colors.white,
+                  ),
+                  label: const Text(
+                    "Tanya ChatPot",
+                    style: TextStyle(color: Colors.white),
+                  ),
                   elevation: 10,
                 ),
               ),
@@ -184,7 +236,7 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
   // ... Paste _buildHeader, _buildCarousel, _buildMenuGrid di sini ...
   Widget _buildHeader(BuildContext context) {
     // ... (Kode Header Lama) ...
-     return Padding(
+    return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -218,7 +270,9 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
               ),
               child: const CircleAvatar(
                 radius: 22,
-                backgroundImage: NetworkImage("https://cdn-icons-png.flaticon.com/512/3135/3135715.png"),
+                backgroundImage: NetworkImage(
+                  "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+                ),
                 backgroundColor: Colors.white,
               ),
             ),
@@ -230,13 +284,13 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
 
   Widget _buildCarousel() {
     // ... (Kode Carousel Lama) ...
-     return CarouselSlider(
+    return CarouselSlider(
       options: CarouselOptions(
         height: 180.0,
         autoPlay: true,
         enlargeCenterPage: true,
         viewportFraction: 0.9,
-        aspectRatio: 16/9,
+        aspectRatio: 16 / 9,
         autoPlayCurve: Curves.fastOutSlowIn,
       ),
       items: imgList.map((item) {
@@ -246,15 +300,17 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             image: DecorationImage(
-              image: AssetImage(item), // Ubah jadi AssetImage jika lokal, atau NetworkImage
+              image: AssetImage(
+                item,
+              ), // Ubah jadi AssetImage jika lokal, atau NetworkImage
               fit: BoxFit.cover,
             ),
-             boxShadow: [
+            boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.2),
                 blurRadius: 10,
                 offset: const Offset(0, 5),
-              )
+              ),
             ],
           ),
           // ... (Isi Banner) ...
@@ -262,17 +318,47 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
       }).toList(),
     );
   }
-  
+
   Widget _buildMenuGrid(BuildContext context) {
     // ... (Kode Grid Lama) ...
-     // List Menu
+    // List Menu
     final menus = [
-      {"icon": Icons.precision_manufacturing_rounded, "label": "Smart Wayang", "route": "/smart_wayang", "color": Colors.teal},
-      {"icon": Icons.camera_alt_rounded, "label": "Scan Wayang", "route": "/pengenalan_wayang", "color": Colors.orange},
-      {"icon": Icons.people_alt_rounded, "label": "Cari Dalang", "route": "/cari_dalang", "color": Colors.purple},
-      {"icon": Icons.quiz_rounded, "label": "Kuis Seru", "route": "/tes_singkat", "color": Colors.blue},
-      {"icon": Icons.video_library_rounded, "label": "Video Wayang", "route": "/video", "color": Colors.red},
-      {"icon": Icons.person_pin_rounded, "label": "Dalang Virtual", "route": "/simulasi_dalang", "color": Colors.brown},
+      {
+        "icon": Icons.precision_manufacturing_rounded,
+        "label": "Smart Wayang",
+        "route": "/smart_wayang",
+        "color": Colors.teal,
+      },
+      {
+        "icon": Icons.camera_alt_rounded,
+        "label": "Scan Wayang",
+        "route": "/pengenalan_wayang",
+        "color": Colors.orange,
+      },
+      {
+        "icon": Icons.people_alt_rounded,
+        "label": "Cari Dalang",
+        "route": "/cari_dalang",
+        "color": Colors.purple,
+      },
+      {
+        "icon": Icons.quiz_rounded,
+        "label": "Kuis Seru",
+        "route": "/tes_singkat",
+        "color": Colors.blue,
+      },
+      {
+        "icon": Icons.video_library_rounded,
+        "label": "Video Wayang",
+        "route": "/video",
+        "color": Colors.red,
+      },
+      {
+        "icon": Icons.person_pin_rounded,
+        "label": "Dalang Virtual",
+        "route": "/simulasi_dalang",
+        "color": Colors.brown,
+      },
     ];
 
     return Padding(
@@ -298,7 +384,11 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(15),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
                 ],
               ),
               padding: const EdgeInsets.symmetric(horizontal: 15),
@@ -310,13 +400,20 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
                       color: (menu['color'] as Color).withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(menu['icon'] as IconData, color: menu['color'] as Color, size: 24),
+                    child: Icon(
+                      menu['icon'] as IconData,
+                      color: menu['color'] as Color,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       menu['label'] as String,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],
@@ -346,7 +443,11 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Row(
@@ -364,16 +465,23 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
                       height: 100,
                       fit: BoxFit.cover,
                       errorBuilder: (ctx, err, _) => Container(
-                        width: 100, height: 100, color: Colors.grey[300],
-                        child: const Icon(Icons.broken_image, color: Colors.grey),
+                        width: 100,
+                        height: 100,
+                        color: Colors.grey[300],
+                        child: const Icon(
+                          Icons.broken_image,
+                          color: Colors.grey,
+                        ),
                       ),
                     )
                   : Container(
-                      width: 100, height: 100, color: Colors.grey[300],
+                      width: 100,
+                      height: 100,
+                      color: Colors.grey[300],
                       child: const Icon(Icons.article, color: Colors.grey),
                     ),
             ),
-            
+
             // Teks Artikel
             Expanded(
               child: Padding(
@@ -394,10 +502,7 @@ class _HomeWayangPageState extends State<HomeWayangPage> with SingleTickerProvid
                     const SizedBox(height: 6),
                     Text(
                       article['content_preview'] ?? '',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 11,
-                      ),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 11),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),

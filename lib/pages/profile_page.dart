@@ -166,7 +166,7 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   // ================= BUILD UI =================
- @override
+  @override
   Widget build(BuildContext context) {
     const primaryColor = Color(0xFFD4A373);
     const secondaryColor = Color(0xFF4B3425);
@@ -209,7 +209,10 @@ class _ProfilePageState extends State<ProfilePage>
                               child: Align(
                                 alignment: Alignment.topLeft,
                                 child: IconButton(
-                                  icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+                                  icon: const Icon(
+                                    Icons.arrow_back_ios_new,
+                                    color: Colors.white,
+                                  ),
                                   onPressed: () => Navigator.pop(context),
                                 ),
                               ),
@@ -239,8 +242,12 @@ class _ProfilePageState extends State<ProfilePage>
                                   radius: 55,
                                   backgroundColor: const Color(0xFFFFF3E0),
                                   // 3. LOGIKA TAMPILAN FOTO DINAMIS
-                                  backgroundImage: (fotoProfil != null && fotoProfil!.isNotEmpty)
-                                      ? NetworkImage(ApiService.imageUrl(fotoProfil!))
+                                  backgroundImage:
+                                      (fotoProfil != null &&
+                                          fotoProfil!.isNotEmpty)
+                                      ? NetworkImage(
+                                          ApiService.imageUrl(fotoProfil!),
+                                        )
                                       : const NetworkImage(
                                           "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
                                         ),
@@ -257,7 +264,10 @@ class _ProfilePageState extends State<ProfilePage>
                               ),
                               Text(
                                 emailUser,
-                                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
                               ),
                             ],
                           ),
