@@ -212,18 +212,23 @@ class ApiService {
   }
 
   // === FITUR ARTIKEL ===
-  static Future<List<dynamic>> getArticles() async {
+  static Future<List<dynamic>> getArticles({http.Client? client}) async {
+    client ??= http.Client();
+
     try {
-      final response = await http.get(Uri.parse("$baseUrl/articles"));
+      final response = await client.get(Uri.parse("$baseUrl/articles"));
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
+
         if (jsonResponse['status'] == 'success') {
-          return jsonResponse['data'];
+          return jsonResponse['data'] as List<dynamic>;
         }
       }
+
       return [];
     } catch (e) {
+      // untuk production
       print("Error getArticles: $e");
       return [];
     }

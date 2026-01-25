@@ -3,11 +3,14 @@ import '../services/api_service.dart';
 import 'article_detail_page.dart';
 
 class ArticleListPage extends StatefulWidget {
-  const ArticleListPage({super.key});
+  final Future<List<dynamic>> Function()? fetcher;
+
+  const ArticleListPage({super.key, this.fetcher});
 
   @override
   State<ArticleListPage> createState() => _ArticleListPageState();
 }
+
 
 class _ArticleListPageState extends State<ArticleListPage> {
   List<dynamic> articles = [];
@@ -20,7 +23,10 @@ class _ArticleListPageState extends State<ArticleListPage> {
   }
 
   void fetchArticles() async {
-    final data = await ApiService.getArticles();
+    final data = widget.fetcher != null
+        ? await widget.fetcher!()
+        : await ApiService.getArticles();
+
     if (mounted) {
       setState(() {
         articles = data;
@@ -28,6 +34,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
       });
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
