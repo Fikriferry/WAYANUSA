@@ -12,7 +12,8 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
+class _LoginPageState extends State<LoginPage>
+    with SingleTickerProviderStateMixin {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   bool isLoading = false;
@@ -31,10 +32,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     );
 
     _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeIn);
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _animController, curve: Curves.elasticOut));
+    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _animController, curve: Curves.elasticOut),
+        );
 
     _animController.forward();
   }
@@ -52,7 +53,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     final password = passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      _showSnack("Waduh, email & password jangan dikosongin euy!", Colors.orange);
+      _showSnack(
+        "Waduh, email & password jangan dikosongin euy!",
+        Colors.orange,
+      );
       return;
     }
 
@@ -62,9 +66,15 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
     if (success) {
       if (!mounted) return;
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeWayangPage()));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeWayangPage()),
+      );
     } else {
-      _showSnack("Email atau password salah, coba cek lagi ya!", Colors.redAccent);
+      _showSnack(
+        "Email atau password salah, coba cek lagi ya!",
+        Colors.redAccent,
+      );
     }
   }
 
@@ -75,7 +85,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
     if (success) {
       if (!mounted) return;
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeWayangPage()));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeWayangPage()),
+      );
     } else {
       _showSnack("Gagal masuk lewat Google euy!", Colors.redAccent);
     }
@@ -114,7 +127,11 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
           Positioned.fill(
             child: Opacity(
               opacity: 0.05,
-              child: Image.asset('assets/images/batik_bg.png', fit: BoxFit.cover, errorBuilder: (c, o, s) => Container()),
+              child: Image.asset(
+                'assets/images/batik_bg.png',
+                fit: BoxFit.cover,
+                errorBuilder: (c, o, s) => Container(),
+              ),
             ),
           ),
 
@@ -150,7 +167,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         ),
                         Text(
                           "Silahkan masuk untuk melanjutkan",
-                          style: GoogleFonts.poppins(color: Colors.white70, fontSize: 14),
+                          style: GoogleFonts.poppins(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
                         ),
                         const SizedBox(height: 40),
 
@@ -163,12 +183,23 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text("Belum punya akun? ", style: GoogleFonts.poppins(color: Colors.white70)),
+                            Text(
+                              "Belum punya akun? ",
+                              style: GoogleFonts.poppins(color: Colors.white70),
+                            ),
                             GestureDetector(
-                              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterPage())),
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const RegisterPage(),
+                                ),
+                              ),
                               child: Text(
                                 "Daftar Sekarang",
-                                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold),
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ],
@@ -192,18 +223,24 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         color: Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 10)),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
       child: Column(
         children: [
           _buildTextField(
+            fieldKey: const Key('login_email'),
             controller: emailController,
             label: "Email",
             icon: Icons.alternate_email_rounded,
           ),
           const SizedBox(height: 15),
           _buildTextField(
+            fieldKey: const Key('login_password'),
             controller: passwordController,
             label: "Password",
             icon: Icons.lock_outline_rounded,
@@ -212,20 +249,26 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
           const SizedBox(height: 10),
           Align(
             alignment: Alignment.centerRight,
-            child: Text("Lupa Password?", style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
+            child: Text(
+              "Lupa Password?",
+              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
+            ),
           ),
           const SizedBox(height: 25),
-          
+
           // TOMBOL LOGIN UTAMA
           _buildPrimaryButton(accent),
-          
+
           const SizedBox(height: 20),
           Row(
             children: [
               Expanded(child: Divider(color: Colors.grey[300])),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Text("Atau", style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+                child: Text(
+                  "Atau",
+                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
+                ),
               ),
               Expanded(child: Divider(color: Colors.grey[300])),
             ],
@@ -239,8 +282,15 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     );
   }
 
-  Widget _buildTextField({required TextEditingController controller, required String label, required IconData icon, bool isPassword = false}) {
+  Widget _buildTextField({
+    Key? fieldKey,
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool isPassword = false,
+  }) {
     return TextField(
+      key: fieldKey,
       controller: controller,
       obscureText: isPassword ? _isObscure : false,
       style: GoogleFonts.poppins(fontSize: 14),
@@ -250,14 +300,23 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         prefixIcon: Icon(icon, color: const Color(0xFFD4A373)),
         suffixIcon: isPassword
             ? IconButton(
-                icon: Icon(_isObscure ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
+                icon: Icon(
+                  _isObscure ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.grey,
+                ),
                 onPressed: () => setState(() => _isObscure = !_isObscure),
               )
             : null,
         filled: true,
         fillColor: Colors.grey[100],
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Color(0xFFD4A373), width: 1.5)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: Color(0xFFD4A373), width: 1.5),
+        ),
       ),
     );
   }
@@ -267,15 +326,32 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       width: double.infinity,
       height: 55,
       child: ElevatedButton(
+        key: const Key('login_button'),
         onPressed: isLoading ? null : _login,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF4B3425),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
           elevation: 5,
         ),
         child: isLoading
-            ? const SizedBox(width: 25, height: 25, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-            : Text("MASUK KE WAYANUSA", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.white)),
+            ? const SizedBox(
+                width: 25,
+                height: 25,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : Text(
+                "MASUK KE WAYANUSA",
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                  color: Colors.white,
+                ),
+              ),
       ),
     );
   }
@@ -297,7 +373,11 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
             height: 22,
             // PENTING: Supaya tidak overflow kalau link mati lagi
             errorBuilder: (context, error, stackTrace) {
-              return const Icon(Icons.g_mobiledata, color: Colors.blue, size: 30);
+              return const Icon(
+                Icons.g_mobiledata,
+                color: Colors.blue,
+                size: 30,
+              );
             },
           ),
           const SizedBox(width: 12),

@@ -1,5 +1,0 @@
-- [x] Add getArticle function to ApiService to fetch individual articles by ID
-- [x] Modify ArticleDetailPage to fetch full article content if content_full is missing
-- [x] Ensure articles have 'id' field for fetching full content
-- [x] Add flutter_html package to render HTML content
-- [x] Replace Text widget with Html widget in ArticleDetailPage
