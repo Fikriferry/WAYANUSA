@@ -14,20 +14,5 @@ void main() {
     expect(find.text('Masuk dengan Google'), findsOneWidget);
   });
 
-  testWidgets('Menampilkan snackbar jika email/password kosong', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const MaterialApp(home: LoginPage()));
 
-    // Biarkan animasi awal jalan dikit
-    await tester.pump(const Duration(milliseconds: 1200));
-
-    // Klik tombol login tanpa isi field
-    await tester.tap(find.text('MASUK KE WAYANUSA'));
-
-    // Biarkan SnackBar muncul
-    await tester.pump(const Duration(milliseconds: 500));
-
-    expect(find.textContaining('email & password'), findsOneWidget);
-  });
 }

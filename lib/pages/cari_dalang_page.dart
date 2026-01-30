@@ -4,7 +4,9 @@ import 'detail_dalang_page.dart'; // Pastikan file ini ada
 // import '../config.dart';
 
 class CariDalangPage extends StatefulWidget {
-  const CariDalangPage({super.key});
+  final Future<List<Map<String, dynamic>>> Function()? getDalangFn;
+
+  const CariDalangPage({super.key, this.getDalangFn});
 
   @override
   State<CariDalangPage> createState() => _CariDalangPageState();
@@ -12,16 +14,17 @@ class CariDalangPage extends StatefulWidget {
 
 class _CariDalangPageState extends State<CariDalangPage> {
   final TextEditingController _searchController = TextEditingController();
-  
+
   // Kita gunakan List<Map> agar fleksibel sesuai return ApiService
   List<Map<String, dynamic>> _allDalang = [];
   List<Map<String, dynamic>> _filteredDalang = [];
-  
+
   bool _loading = true;
 
   // URL Base untuk gambar (Sesuaikan dengan IP Flask kamu)
   // Folder static flask biasanya diakses via /static/...
-  final String imageBaseUrl = "https://monoclinic-superboldly-tobi.ngrok-free.dev/static/uploads";
+  final String imageBaseUrl =
+      "https://monoclinic-superboldly-tobi.ngrok-free.dev/static/uploads";
 
   @override
   void initState() {
@@ -33,15 +36,14 @@ class _CariDalangPageState extends State<CariDalangPage> {
   Future<void> _loadDalang() async {
     setState(() => _loading = true);
     try {
-      // Panggil fungsi getDalang dari ApiService yang baru
-      final data = await DalangApi.getDalang();
-      
+      final data = widget.getDalangFn != null
+          ? await widget.getDalangFn!()
+          : await DalangApi.getDalang();
+
       setState(() {
         _allDalang = data;
-        _filteredDalang = data; // Awalnya tampilkan semua
+        _filteredDalang = data;
       });
-    } catch (e) {
-      debugPrint("Error loading dalang: $e");
     } finally {
       setState(() => _loading = false);
     }
@@ -54,8 +56,10 @@ class _CariDalangPageState extends State<CariDalangPage> {
       results = _allDalang;
     } else {
       results = _allDalang
-          .where((user) =>
-              user["nama"].toLowerCase().contains(keyword.toLowerCase()))
+          .where(
+            (user) =>
+                user["nama"].toLowerCase().contains(keyword.toLowerCase()),
+          )
           .toList();
     }
 
@@ -77,7 +81,10 @@ class _CariDalangPageState extends State<CariDalangPage> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF4B3425)),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF4B3425),
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -112,29 +119,34 @@ class _CariDalangPageState extends State<CariDalangPage> {
                 decoration: InputDecoration(
                   hintText: "Cari nama dalang...",
                   hintStyle: TextStyle(color: Colors.grey[400]),
-                  prefixIcon: const Icon(Icons.search_rounded, color: primaryColor),
+                  prefixIcon: const Icon(
+                    Icons.search_rounded,
+                    color: primaryColor,
+                  ),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 15),
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 25),
 
             // 2. LIST DATA
             Expanded(
               child: _loading
-                  ? const Center(child: CircularProgressIndicator(color: primaryColor))
+                  ? const Center(
+                      child: CircularProgressIndicator(color: primaryColor),
+                    )
                   : _filteredDalang.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          itemCount: _filteredDalang.length,
-                          physics: const BouncingScrollPhysics(),
-                          itemBuilder: (context, index) {
-                            final dalang = _filteredDalang[index];
-                            return _buildDalangCard(dalang);
-                          },
-                        ),
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                      itemCount: _filteredDalang.length,
+                      physics: const BouncingScrollPhysics(),
+                      itemBuilder: (context, index) {
+                        final dalang = _filteredDalang[index];
+                        return _buildDalangCard(dalang);
+                      },
+                    ),
             ),
           ],
         ),
@@ -196,7 +208,10 @@ class _CariDalangPageState extends State<CariDalangPage> {
                     fit: BoxFit.cover,
                     image: (fullImageUrl.isNotEmpty)
                         ? NetworkImage(fullImageUrl)
-                        : const NetworkImage("https://cdn-icons-png.flaticon.com/512/3135/3135715.png") as ImageProvider,
+                        : const NetworkImage(
+                                "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+                              )
+                              as ImageProvider,
                     onError: (exception, stackTrace) {
                       // Handle jika gambar error load
                       debugPrint("Gagal load gambar: $fullImageUrl");
@@ -206,7 +221,7 @@ class _CariDalangPageState extends State<CariDalangPage> {
               ),
             ),
             const SizedBox(width: 16),
-            
+
             // INFO TEXT
             Expanded(
               child: Column(
@@ -223,12 +238,19 @@ class _CariDalangPageState extends State<CariDalangPage> {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 14,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           dalang['alamat'] ?? "Alamat tidak tersedia",
-                          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -238,7 +260,7 @@ class _CariDalangPageState extends State<CariDalangPage> {
                 ],
               ),
             ),
-            
+
             // ARROW ICON
             const Icon(Icons.chevron_right_rounded, color: Color(0xFFD4A373)),
           ],

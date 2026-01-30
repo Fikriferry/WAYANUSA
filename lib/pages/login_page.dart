@@ -4,18 +4,22 @@ import 'register_page.dart';
 import 'homepage.dart';
 import '../services/api_service.dart';
 import '../services/google_auth.dart';
+import 'package:flutter/foundation.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({super.key, this.loginFn, this.disableAnimation = false});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
+  final Future<bool> Function(String, String)? loginFn;
+  final bool disableAnimation; // 👈 TAMBAH INI
 }
 
 class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+
   bool isLoading = false;
   bool _isObscure = true; // Untuk toggle password
 
@@ -26,6 +30,7 @@ class _LoginPageState extends State<LoginPage>
   @override
   void initState() {
     super.initState();
+
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
@@ -37,7 +42,10 @@ class _LoginPageState extends State<LoginPage>
           CurvedAnimation(parent: _animController, curve: Curves.elasticOut),
         );
 
-    _animController.forward();
+    // ❗ HANYA JALANKAN ANIMASI DI APP BENERAN, BUKAN DI TEST
+    if (!kIsWeb && !bool.fromEnvironment('FLUTTER_TEST')) {
+      _animController.forward();
+    }
   }
 
   @override
@@ -53,15 +61,16 @@ class _LoginPageState extends State<LoginPage>
     final password = passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      _showSnack(
-        "Waduh, email & password jangan dikosongin euy!",
-        Colors.orange,
-      );
+      _showSnack("Email & password jangan kosong!", Colors.orange);
       return;
     }
 
     setState(() => isLoading = true);
-    final success = await ApiService.login(email, password);
+
+    final success = widget.loginFn != null
+        ? await widget.loginFn!(email, password) // test mode
+        : await ApiService.login(email, password); // real API
+
     setState(() => isLoading = false);
 
     if (success) {
@@ -71,10 +80,7 @@ class _LoginPageState extends State<LoginPage>
         MaterialPageRoute(builder: (_) => const HomeWayangPage()),
       );
     } else {
-      _showSnack(
-        "Email atau password salah, coba cek lagi ya!",
-        Colors.redAccent,
-      );
+      _showSnack("Login gagal!", Colors.redAccent);
     }
   }
 

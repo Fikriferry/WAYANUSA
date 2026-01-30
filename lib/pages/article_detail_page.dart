@@ -8,10 +8,7 @@ import '../services/api_service.dart';
 class ArticleDetailPage extends StatefulWidget {
   final Map<String, dynamic> article;
 
-  const ArticleDetailPage({
-    super.key,
-    required this.article,
-  });
+  const ArticleDetailPage({super.key, required this.article});
 
   @override
   State<ArticleDetailPage> createState() => _ArticleDetailPageState();
@@ -62,7 +59,7 @@ class _ArticleDetailPageState extends State<ArticleDetailPage> {
       // Sesuaikan format input dari API kamu (contoh: "2024-01-20")
       // Jika format dari API adalah ISO 8601, pakai DateTime.parse(dateStr)
       // Disini saya asumsi inputnya String biasa, kita coba parse
-      DateTime date = DateTime.tryParse(dateStr) ?? DateTime.now(); 
+      DateTime date = DateTime.tryParse(dateStr) ?? DateTime.now();
       return DateFormat('d MMMM yyyy').format(date);
     } catch (e) {
       return dateStr;
@@ -81,7 +78,9 @@ class _ArticleDetailPageState extends State<ArticleDetailPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFFD4A373)))
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFFD4A373)),
+            )
           : CustomScrollView(
               slivers: [
                 // ================= APP BAR KEREN =================
@@ -101,10 +100,16 @@ class _ArticleDetailPageState extends State<ArticleDetailPage> {
                     CircleAvatar(
                       backgroundColor: Colors.black26,
                       child: IconButton(
-                        icon: const Icon(Icons.share, color: Colors.white, size: 20),
+                        icon: const Icon(
+                          Icons.share,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                         onPressed: () {
                           // Fitur Share
-                          Share.share('$title\n\nBaca selengkapnya di Wayanusa App!');
+                          Share.share(
+                            '$title\n\nBaca selengkapnya di Wayanusa App!',
+                          );
                         },
                       ),
                     ),
@@ -117,15 +122,22 @@ class _ArticleDetailPageState extends State<ArticleDetailPage> {
                         // GAMBAR UTAMA (Hero Animation)
                         Hero(
                           tag: 'article_img_${article['id']}',
-                          child: thumbnail != null && thumbnail.toString().isNotEmpty
+                          child:
+                              thumbnail != null &&
+                                  thumbnail.toString().isNotEmpty
                               ? Image.network(
                                   thumbnail,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(color: Colors.grey[300]),
+                                  errorBuilder: (_, __, ___) =>
+                                      Container(color: Colors.grey[300]),
                                 )
                               : Container(
                                   color: const Color(0xFF4B3425),
-                                  child: const Icon(Icons.menu_book, size: 80, color: Colors.white24),
+                                  child: const Icon(
+                                    Icons.menu_book,
+                                    size: 80,
+                                    color: Colors.white24,
+                                  ),
                                 ),
                         ),
                         // GRADIENT OVERLAY (Biar ikon back kelihatan)
@@ -150,7 +162,10 @@ class _ArticleDetailPageState extends State<ArticleDetailPage> {
                 // ================= ISI KONTEN =================
                 SliverToBoxAdapter(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 30,
+                    ),
                     decoration: const BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.only(
@@ -165,7 +180,10 @@ class _ArticleDetailPageState extends State<ArticleDetailPage> {
                       children: [
                         // BADGE KATEGORI (Opsional)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFD4AF37).withOpacity(0.15),
                             borderRadius: BorderRadius.circular(20),
@@ -184,7 +202,8 @@ class _ArticleDetailPageState extends State<ArticleDetailPage> {
                         // JUDUL UTAMA
                         Text(
                           title,
-                          style: GoogleFonts.merriweather( // Font Serif elegan untuk judul
+                          style: GoogleFonts.merriweather(
+                            // Font Serif elegan untuk judul
                             fontSize: 26,
                             fontWeight: FontWeight.w900,
                             height: 1.3,
@@ -196,11 +215,24 @@ class _ArticleDetailPageState extends State<ArticleDetailPage> {
                         // INFO META (Penulis, Tanggal, Waktu Baca)
                         Row(
                           children: [
-                            const CircleAvatar(
+                            CircleAvatar(
                               radius: 18,
-                              backgroundImage: AssetImage('assets/images/cepot_mascot.png'), // Ganti foto admin/cepot
-                              backgroundColor: Colors.grey,
+                              backgroundColor: Colors.grey[300],
+                              child: ClipOval(
+                                child: Image.asset(
+                                  'assets/images/cepot_mascot.png',
+                                  fit: BoxFit.cover,
+                                  width: 36,
+                                  height: 36,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.person,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
                             ),
+
                             const SizedBox(width: 12),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,14 +249,24 @@ class _ArticleDetailPageState extends State<ArticleDetailPage> {
                                   children: [
                                     Text(
                                       date,
-                                      style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600]),
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 11,
+                                        color: Colors.grey[600],
+                                      ),
                                     ),
                                     const SizedBox(width: 8),
-                                    const Icon(Icons.circle, size: 4, color: Colors.grey),
+                                    const Icon(
+                                      Icons.circle,
+                                      size: 4,
+                                      color: Colors.grey,
+                                    ),
                                     const SizedBox(width: 8),
                                     Text(
                                       readTime,
-                                      style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600]),
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 11,
+                                        color: Colors.grey[600],
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -241,7 +283,8 @@ class _ArticleDetailPageState extends State<ArticleDetailPage> {
                         // Menggunakan HtmlWidget agar gambar/bold/italic di dalam konten muncul
                         HtmlWidget(
                           content,
-                          textStyle: GoogleFonts.merriweather( // Font Serif enak untuk baca panjang
+                          textStyle: GoogleFonts.merriweather(
+                            // Font Serif enak untuk baca panjang
                             fontSize: 16,
                             height: 1.8,
                             color: const Color(0xFF424242),
@@ -274,19 +317,20 @@ class _ArticleDetailPageState extends State<ArticleDetailPage> {
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         "Sumber Referensi:",
                                         style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.bold, 
-                                          fontSize: 12
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
                                         ),
                                       ),
                                       Text(
                                         article['source_link'],
                                         style: GoogleFonts.poppins(
-                                          color: Colors.blue, 
+                                          color: Colors.blue,
                                           fontSize: 12,
                                           decoration: TextDecoration.underline,
                                         ),
@@ -295,11 +339,11 @@ class _ArticleDetailPageState extends State<ArticleDetailPage> {
                                       ),
                                     ],
                                   ),
-                                )
+                                ),
                               ],
                             ),
                           ),
-                        
+
                         const SizedBox(height: 50), // Ruang bawah
                       ],
                     ),

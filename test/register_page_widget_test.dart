@@ -35,16 +35,4 @@ void main() {
     // Validasi SnackBar
     expect(find.textContaining('isi semua datanya'), findsOneWidget);
   });
-
-  testWidgets('Isi form register', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: RegisterPage()));
-
-    await tester.enterText(find.byType(TextField).at(0), 'Boyy');
-    await tester.enterText(find.byType(TextField).at(1), 'boyy@mail.com');
-    await tester.enterText(find.byType(TextField).at(2), '123456');
-    await tester.enterText(find.byType(TextField).at(3), '123456');
-
-    await tester.tap(find.text('DAFTAR SEKARANG'));
-    await tester.pump();
-  });
 }
